@@ -27,6 +27,9 @@ library(janitor)
 
 #hi
 
+library(ggpubr)
+
+mean(md$root_fresh_weight)
 
 
 summary(metadata)
