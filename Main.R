@@ -27,10 +27,8 @@ library(janitor)
 
 #hi
 
-#bonak
 
 
-
-
+summary(metadata)
 
 
