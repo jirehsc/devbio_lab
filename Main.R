@@ -16,21 +16,13 @@ library(car)
 library(emmeans)
 library(lme4)
 library(lmerTest)
-library(ggpubr)
-library(rstatix)
+library(ggp
 library(janitor)
 
 # Data Pipelining and Cleaning
 ################################
 
-#hello world
-
-#hi
-
 library(ggpubr)
-
-mean(md$root_fresh_weight)
-
 
 summary(metadata)
 
