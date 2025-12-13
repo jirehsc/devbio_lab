@@ -1,8 +1,13 @@
 #Loading data
 
-df <- read.csv("Metadata_Record.csv", header = TRUE)
-names(df)
+md <- read.csv("metadata.csv", header = TRUE)
+names(md)
 
-summary(df)
+summary(metadata)
 
-#hello-wlorld
+#install/loading packages
+
+
+
+
+
