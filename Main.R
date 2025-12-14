@@ -75,19 +75,18 @@ clean <- md %>%
   filter(!(leaf_area == 0 & leaf_number == 0 & shoot_dry_weight == 0 & root_dry_weight == 0)) %>%
   distinct(specimen_id, .keep_all = TRUE)  %>% 
   
-  
-  
-  
   #NAs to 0
-  mutate(across(everything(), ~ replace_na(.x, 0)))
+  mutate(across(everything(), ~ replace_na(.x, 0))),
+
+
 
 # Verify/recheck
 class(clean$block)
 class(clean$ethanol_pre_treatment)
 print(paste("Columns:", ncol(clean)))
 print(paste("Rows:", nrow(clean)))
-names(clean)  
+names(clean)
 head(clean)
 view(clean)
 
-#GROUPINGS BASED ON TREATMENTS AND DETECTING OUTLIERS
+#GROUPINGS BASED ON TREATMENTS AND DETECTING OUTLIERS##
