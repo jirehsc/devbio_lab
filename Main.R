@@ -32,8 +32,8 @@ summary(metadata)
 
 #import dataset
 
-data <- read.csv("metadata.csv", header = TRUE)
-View(data)
+md <- read.csv("metadata.csv", header = TRUE)
+View(md)
 
 #load library
 library(readxl)
@@ -41,16 +41,16 @@ library(tidyverse)
 library(janitor)
 
 #observe/ inspect data
-head(data)
-tail(data)
-str(data)
-summary(data)
+head(md)
+tail(md)
+str(md)
+summary(md)
 ###note: NA in columns: LFW,LDW, TW, RWC, WD 
 ###note: dead plants in 3 rows (specimenid: CX2, CY2, EY2,)
 
 #data types and errors
 
-clean_data <- rw %>%
+clean <- md %>%
   clean_names() %>%  
   mutate(
     # Fix data types
@@ -78,13 +78,17 @@ clean_data <- rw %>%
   distinct(specimen_id, .keep_all = TRUE)  %>% 
   
   #NAs to 0
-  mutate(across(everything(), ~ replace_na(.x, 0)))
+  mutate(across(everything(), ~ replace_na(.x, 0))),
+
+
 
 # Verify/recheck
-class(clean_data$block)
-class(clean_data$ethanol_pre_treatment)
-print(paste("Columns:", ncol(clean_data)))
-print(paste("Rows:", nrow(clean_data)))
-names(clean_data)  
-head(clean_data)
-view(clean_data)
+class(clean$block)
+class(clean$ethanol_pre_treatment)
+print(paste("Columns:", ncol(clean)))
+print(paste("Rows:", nrow(clean)))
+names(clean)
+head(clean)
+view(clean)
+
+#GROUPINGS BASED ON TREATMENTS AND DETECTING OUTLIERS##
