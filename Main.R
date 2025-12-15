@@ -31,7 +31,7 @@ summary(metadata)
 
 #import dataset
 
-md <- read.csv("metadata.csv", header = TRUE)
+md <- read.csv("metadata2.csv", header = TRUE)
 View(md)
 
 #load library
@@ -213,3 +213,5 @@ for (tr in trait_cols) {
 
 # visualize trait
 boxplot(clean$root_fresh_weight)
+
+
