@@ -65,11 +65,13 @@ clean_data <- rw %>%
              TRUE ~ as.numeric(as.character(.x))
            )),
     
-    specimen_id = as.character(specimen_id),
+    specimen_id = as.character(specimen_id)
     
     # make block as factor
     block = as.factor(block)
   ) %>%
+  
+  view(clean_data)
   
   # Remove the dead 
   filter(!(leaf_area == 0 & leaf_number == 0 & shoot_dry_weight == 0 & root_dry_weight == 0)) %>%
