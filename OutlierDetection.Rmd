@@ -1,0 +1,95 @@
+---
+title: "OutlierDetection"
+author: "Planco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE)
+library(tidyverse)
+library(janitor)
+library(dplyr)
+library(knitr)
+```
+
+#load and clean data
+```{r}
+md <- read.csv("C:/Users/LJ Planco/Documents/LJ/devbio_lab/metadata2.csv", header = TRUE)
+clean <- md %>% clean_names() %>% mutate(block = as.factor(block))
+```
+
+#Outlier detection using IQR
+```{r}
+calculate_outliers <- function(data, trait) {
+  x <- data[[trait]]
+  Q1  <- quantile(x, 0.25, na.rm = TRUE)
+  Q3  <- quantile(x, 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR_val
+  upper_bound <- Q3 + 1.5 * IQR_val
+  
+  cat("\n========================\n")
+  cat("Trait:", trait, "\n")
+  cat("Q1:", Q1, " Q3:", Q3, " IQR:", IQR_val, "\n")
+  cat("Lower bound:", lower_bound, " Upper bound:", upper_bound, "\n")
+  
+  out_raw <- x < lower_bound | x > upper_bound
+  outliers_logical <- ifelse(is.na(out_raw), FALSE, out_raw)
+  
+  outlier_values <- x[outliers_logical]
+  cat("Number of outliers:", length(outlier_values), "\n")
+  if (length(outlier_values) > 0) {
+    cat("Outlier values:", outlier_values, "\n")
+  }
+  return(outliers_logical)
+}
+```
+
+#apply to all traits
+```{r}
+trait_cols <- c("leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight", 
+                "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight", 
+                "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit", 
+                "plant_height", "stem_diameter", "shoot_length", "root_length", 
+                "root_to_shoot_ratio")
+
+trait_outliers <- lapply(trait_cols, function(tr) calculate_outliers(clean, tr))
+names(trait_outliers) <- trait_cols
+
+clean_outliers <- clean
+for (tr in trait_cols) {
+  clean_outliers[[paste0(tr, "_outlier")]] <- trait_outliers[[tr]]
+}
+
+# Summary table
+outlier_cols <- grep("_outlier$", names(clean_outliers), value = TRUE)
+summary_df <- data.frame(Trait = gsub("_outlier", "", outlier_cols), 
+                        Outliers = sapply(outlier_cols, function(col) sum(clean_outliers[[col]], na.rm = TRUE)))
+kable(summary_df)
+```
+
+#sample visualization
+```{r}
+boxplot(clean$root_fresh_weight, 
+        main = "Root Fresh Weight - IQR Outliers", 
+        ylab = "Weight (g)", 
+        col = "#E8F4FD",      # Light blue background
+        border = "#2E86AB",   # Dark blue outline
+        pch = 19,             # Filled circles for outliers
+        cex = 1.2,            # Larger outlier points
+        col.main = "#1B4F72", # Dark blue title
+        font.main = 2)
+
+boxplot(clean$leaf_rwc, 
+        main = "Leaf Relative Water Content", 
+        ylab = "RWC (%)", 
+        col = "#FFF3E0",      
+        border = "#F57C00",   
+        pch = 19,             
+        cex = 1.2,            
+        col.main = "#E65100")
+
+```
