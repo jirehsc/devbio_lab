@@ -72,7 +72,7 @@ clean <- md %>%
     block = as.factor(block)
   )
   
-  view(clean)
+  View(clean)
   
   # Remove the dead 
   clean <- clean %>%
@@ -82,7 +82,7 @@ clean <- md %>%
           coalesce(shoot_dry_weight, 0) == 0 &
           coalesce(root_dry_weight, 0) == 0)
     )
-
+  
 
 # Verify/recheck
 class(clean$block)
@@ -158,3 +158,58 @@ CY <- group_dfs$CY
 EY <- group_dfs$EY   
 CZ <- group_dfs$CZ   
 EZ <- group_dfs$EZ   
+
+#Detecting outlier using IQR-------------------------
+
+##IQR= Q3-Q1
+calculate_outliers <- function(data, trait) {
+  x <- data[[trait]]
+  
+  Q1  <- quantile(x, 0.25, na.rm = TRUE)
+  Q3  <- quantile(x, 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR_val
+  upper_bound <- Q3 + 1.5 * IQR_val
+  
+  cat("\n========================\n")
+  cat("Trait:", trait, "\n")
+  cat("Q1:", Q1, " Q3:", Q3, " IQR:", IQR_val, "\n")
+  cat("Lower bound:", lower_bound, " Upper bound:", upper_bound, "\n")
+  
+  # treat NA as not an outlier
+  out_raw <- x < lower_bound | x > upper_bound
+  outliers_logical <- ifelse(is.na(out_raw), FALSE, out_raw)
+  
+  
+  outlier_values <- x[outliers_logical]
+  
+  cat("Number of outliers:", length(outlier_values), "\n")
+  if (length(outlier_values) > 0) {
+    cat("Outlier values:", outlier_values, "\n")
+  }
+  
+  return(outliers_logical)
+}
+
+# List of all traits
+trait_cols <- c(
+  "leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight", 
+  "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight", 
+  "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit", 
+  "plant_height", "stem_diameter", "shoot_length", "root_length", 
+  "root_to_shoot_ratio"
+)
+
+# Apply per trait and see outliers each trait
+trait_outliers <- lapply(trait_cols, function(tr) calculate_outliers(clean, tr))
+names(trait_outliers) <- trait_cols
+
+# FLAG outliers inside df (if viewed, additional coloumns, true=outliers, false=normal)
+clean_outliers <- clean
+for (tr in trait_cols) {
+  out_name <- paste0(tr, "_outlier")
+  clean_outliers[[out_name]] <- trait_outliers[[tr]]
+}
+
+# visualize trait
+boxplot(clean$root_fresh_weight)
