@@ -314,4 +314,5 @@ shapiro.test(EY$block_survival_rate)
 shapiro.test(CZ$block_survival_rate)
 shapiro.test(EZ$block_survival_rate)
 
+# Homogeneity test per treatment
 
