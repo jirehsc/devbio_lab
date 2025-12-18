@@ -24,7 +24,7 @@ library(janitor)
 
 library(ggpubr)
 
-summary(metadata)
+summary(metadata2)
 
 #njchnfcjdnhc
 
@@ -215,6 +215,103 @@ for (tr in trait_cols) {
 # visualize trait
 boxplot(clean$root_fresh_weight)
 
-unlink("C:\Users\johan\AppData\Local\R\win-library", 
-       recursive = TRUE, 
-       pattern = "00LOCK")
+# Normality Test per treatment
+shapiro.test(CX$leaf_area)
+shapiro.test(EX$leaf_area)
+shapiro.test(CY$leaf_area)
+shapiro.test(EY$leaf_area)
+shapiro.test(CZ$leaf_area)
+shapiro.test(EZ$leaf_area)
+
+shapiro.test(CX$leaf_number)
+shapiro.test(EX$leaf_number)
+shapiro.test(CY$leaf_number)
+shapiro.test(EY$leaf_number)
+shapiro.test(CZ$leaf_number)
+shapiro.test(EZ$leaf_number)
+
+shapiro.test(CX$shoot_dry_weight)
+shapiro.test(EX$shoot_dry_weight)
+shapiro.test(CY$shoot_dry_weight)
+shapiro.test(EY$shoot_dry_weight)
+shapiro.test(CZ$shoot_dry_weight)
+shapiro.test(EZ$shoot_dry_weight)
+
+shapiro.test(CX$root_dry_weight)
+shapiro.test(EX$root_dry_weight)
+shapiro.test(CY$root_dry_weight)
+shapiro.test(EY$root_dry_weight)
+shapiro.test(CZ$root_dry_weight)
+shapiro.test(EZ$root_dry_weight)
+
+shapiro.test(CX$shoot_fresh_weight)
+shapiro.test(EX$shoot_fresh_weight)
+shapiro.test(CY$shoot_fresh_weight)
+shapiro.test(EY$shoot_fresh_weight)
+shapiro.test(CZ$shoot_fresh_weight)
+shapiro.test(EZ$shoot_fresh_weight)
+
+shapiro.test(CX$root_fresh_weight)
+shapiro.test(EX$root_fresh_weight)
+shapiro.test(CY$root_fresh_weight)
+shapiro.test(EY$root_fresh_weight)
+shapiro.test(CZ$root_fresh_weight)
+shapiro.test(EZ$root_fresh_weight)
+
+shapiro.test(CX$plant_height)
+shapiro.test(EX$plant_height)
+shapiro.test(CY$plant_height)
+shapiro.test(EY$plant_height)
+shapiro.test(CZ$plant_height)
+shapiro.test(EZ$plant_height)
+
+shapiro.test(CX$stem_diameter)
+shapiro.test(EX$stem_diameter)
+shapiro.test(CY$stem_diameter)
+shapiro.test(EY$stem_diameter)
+shapiro.test(CZ$stem_diameter)
+shapiro.test(EZ$stem_diameter)
+
+shapiro.test(CX$shoot_length)
+shapiro.test(EX$shoot_length)
+shapiro.test(CY$shoot_length)
+shapiro.test(EY$shoot_length)
+shapiro.test(CZ$shoot_length)
+shapiro.test(EZ$shoot_length)
+
+shapiro.test(CX$root_length)
+shapiro.test(EX$root_length)
+shapiro.test(CY$root_length)
+shapiro.test(EY$root_length)
+shapiro.test(CZ$root_length)
+shapiro.test(EZ$root_length)
+
+shapiro.test(CX$root_to_shoot_ratio)
+shapiro.test(EX$root_to_shoot_ratio)
+shapiro.test(CY$root_to_shoot_ratio)
+shapiro.test(EY$root_to_shoot_ratio)
+shapiro.test(CZ$root_to_shoot_ratio)
+shapiro.test(EZ$root_to_shoot_ratio)
+
+shapiro.test(CX$health_status)
+shapiro.test(EX$health_status)
+shapiro.test(CY$health_status)
+shapiro.test(EY$health_status)
+shapiro.test(CZ$health_status)
+shapiro.test(EZ$health_status)
+
+shapiro.test(CX$block_mortality_rate)
+shapiro.test(EX$block_mortality_rate)
+shapiro.test(CY$block_mortality_rate)
+shapiro.test(EY$block_mortality_rate)
+shapiro.test(CZ$block_mortality_rate)
+shapiro.test(EZ$block_mortality_rate)
+
+shapiro.test(CX$block_survival_rate)
+shapiro.test(EX$block_survival_rate)
+shapiro.test(CY$block_survival_rate)
+shapiro.test(EY$block_survival_rate)
+shapiro.test(CZ$block_survival_rate)
+shapiro.test(EZ$block_survival_rate)
+
+
