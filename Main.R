@@ -316,3 +316,17 @@ shapiro.test(EZ$block_survival_rate)
 
 # Homogeneity test per treatment
 
+fligner.test(list(CX$leaf_area, EX$leaf_area, CY$leaf_area, EY$leaf_area, CZ$leaf_area, EZ$leaf_area))
+fligner.test(list(CX$leaf_number, EX$leaf_number, CY$leaf_number, EY$leaf_number, CZ$leaf_number, EZ$leaf_number))
+fligner.test(list(CX$shoot_dry_weight, EX$shoot_dry_weight, CY$shoot_dry_weight, EY$shoot_fresh_weight, CZ$shoot_dry_weight, EZ$shoot_dry_weight))
+fligner.test(list(CX$root_dry_weight, EX$root_dry_weight, CY$root_dry_weight, EY$root_dry_weight, CZ$root_dry_weight, EZ$root_dry_weight))
+fligner.test(list(CX$shoot_fresh_weight, EX$shoot_fresh_weight, CY$shoot_fresh_weight, EY$shoot_fresh_weight, CZ$shoot_fresh_weight, EZ$shoot_fresh_weight))
+fligner.test(list(CX$root_fresh_weight, EX$root_fresh_weight, CY$root_fresh_weight, EY$root_fresh_weight, CZ$root_fresh_weight, EZ$root_fresh_weight))
+fligner.test(list(CX$plant_height, EX$plant_height, CY$plant_height, EY$plant_height, CZ$plant_height, EZ$plant_height))
+fligner.test(list(CX$stem_diameter, EX$stem_diameter, CY$stem_diameter, EY$stem_diameter, CZ$stem_diameter, EZ$stem_diameter))
+fligner.test(list(CX$shoot_length, EX$shoot_length, CY$shoot_length, EY$shoot_length, CZ$shoot_length, EZ$shoot_length))
+fligner.test(list(CX$root_length, EX$root_length, CY$root_length, EY$root_length, CZ$root_length, EZ$root_length))
+fligner.test(list(CX$root_to_shoot_ratio, EX$root_to_shoot_ratio, CY$root_to_shoot_ratio, EY$root_to_shoot_ratio, CZ$root_to_shoot_ratio, EZ$root_to_shoot_ratio))
+fligner.test(list(CX$health_status, EX$health_status, CY$health_status, EY$health_status, CZ$health_status, EZ$health_status))
+fligner.test(list(CX$block_mortality_rate, EX$block_mortality_rate, CY$block_mortality_rate, EY$block_mortality_rate, CZ$block_mortality_rate, EZ$block_mortality_rate))
+fligner.test(list(CX$block_survival_rate, EX$block_survival_rate, CY$block_survival_rate, EY$block_survival_rate, CZ$block_survival_rate, EZ$block_survival_rate))
