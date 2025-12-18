@@ -1,3 +1,4 @@
+
 #Loading data
 
 md <- read.csv("metadata2.csv", header = TRUE)
@@ -71,18 +72,18 @@ clean <- md %>%
     specimen_id = as.character(specimen_id),
     block = as.factor(block)
   )
-  
-  View(clean)
-  
-  # Remove the dead 
-  clean <- clean %>%
-    filter(
-      !(coalesce(leaf_area, 0) == 0 &
-          coalesce(leaf_number, 0) == 0 &
-          coalesce(shoot_dry_weight, 0) == 0 &
-          coalesce(root_dry_weight, 0) == 0)
-    )
-  
+
+View(clean)
+
+# Remove the dead 
+clean <- clean %>%
+  filter(
+    !(coalesce(leaf_area, 0) == 0 &
+        coalesce(leaf_number, 0) == 0 &
+        coalesce(shoot_dry_weight, 0) == 0 &
+        coalesce(root_dry_weight, 0) == 0)
+  )
+
 
 # Verify/recheck
 class(clean$block)
@@ -214,4 +215,6 @@ for (tr in trait_cols) {
 # visualize trait
 boxplot(clean$root_fresh_weight)
 
-
+unlink("C:\Users\johan\AppData\Local\R\win-library", 
+       recursive = TRUE, 
+       pattern = "00LOCK")
