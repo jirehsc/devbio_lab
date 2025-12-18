@@ -197,7 +197,7 @@ trait_cols <- c(
   "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight", 
   "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit", 
   "plant_height", "stem_diameter", "shoot_length", "root_length", 
-  "root_to_shoot_ratio"
+  "root_to_shoot_ratio "
 )
 
 # Apply per trait and see outliers each trait
@@ -211,7 +211,7 @@ for (tr in trait_cols) {
   clean_outliers[[out_name]] <- trait_outliers[[tr]]
 }
 
+
 # visualize trait
 boxplot(clean$root_fresh_weight)
-
 
