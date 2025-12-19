@@ -330,3 +330,35 @@ fligner.test(list(CX$root_to_shoot_ratio, EX$root_to_shoot_ratio, CY$root_to_sho
 fligner.test(list(CX$health_status, EX$health_status, CY$health_status, EY$health_status, CZ$health_status, EZ$health_status))
 fligner.test(list(CX$block_mortality_rate, EX$block_mortality_rate, CY$block_mortality_rate, EY$block_mortality_rate, CZ$block_mortality_rate, EZ$block_mortality_rate))
 fligner.test(list(CX$block_survival_rate, EX$block_survival_rate, CY$block_survival_rate, EY$block_survival_rate, CZ$block_survival_rate, EZ$block_survival_rate))
+
+# Descriptive analysis per treatment
+
+# Minimum data per treatment
+min(CX$leaf_area)
+min(EX$leaf_area)
+min(CY$leaf_area)
+min(EY$leaf_area)
+min(CZ$leaf_area)
+min(EZ$leaf_area)
+
+max(CX$leaf_area)
+max(EX$leaf_area)
+max(CY$leaf_area)
+max(EY$leaf_area)
+max(CZ$leaf_area)
+max(EZ$leaf_area)
+
+mean(CX$leaf_area)
+mean(EX$leaf_area)
+mean(CY$leaf_area)
+mean(EY$leaf_area)
+mean(CZ$leaf_area)
+mean(EZ$leaf_area)
+
+median(CX$leaf_area)
+median(EX$leaf_area)
+median(CY$leaf_area)
+median(EY$leaf_area)
+median(CZ$leaf_area)
+median(EZ$leaf_area)
+
