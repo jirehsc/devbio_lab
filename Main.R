@@ -331,7 +331,20 @@ fligner.test(list(CX$health_status, EX$health_status, CY$health_status, EY$healt
 fligner.test(list(CX$block_mortality_rate, EX$block_mortality_rate, CY$block_mortality_rate, EY$block_mortality_rate, CZ$block_mortality_rate, EZ$block_mortality_rate))
 fligner.test(list(CX$block_survival_rate, EX$block_survival_rate, CY$block_survival_rate, EY$block_survival_rate, CZ$block_survival_rate, EZ$block_survival_rate))
 
-# Descriptive analysis per treatment
+leveneTest(leaf_area ~ group, data = md_groups)
+leveneTest(leaf_number ~ group, data = md_groups)
+leveneTest(shoot_dry_weight ~ group, data = md_groups)
+leveneTest(root_dry_weight ~ group, data = md_groups)
+leveneTest(shoot_fresh_weight ~ group, data = md_groups)
+leveneTest(root_fresh_weight ~ group, data = md_groups)
+leveneTest(plant_height ~ group, data = md_groups)
+leveneTest(stem_diameter ~ group, data = md_groups)
+leveneTest(shoot_length ~ group, data = md_groups)
+leveneTest(root_length ~ group, data = md_groups)
+leveneTest(root_to_shoot_ratio ~ group, data = md_groups)
+leveneTest(health_status ~ group, data = md_groups)
+leveneTest(block_mortality_rate ~ group, data = md_groups)
+leveneTest(block_survival_rate ~ group, data = md_groups)
 
 # Descriptive analysis of leaf area
 min(CX$leaf_area)
@@ -899,3 +912,5 @@ boxplot(root_to_shoot_ratio ~ group,
         xlab = "Treatment Group",
         ylab = "Root to Shoot Ratio",
         main = "Root to Shoot Ratio by Treatment")
+
+
