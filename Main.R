@@ -333,7 +333,7 @@ fligner.test(list(CX$block_survival_rate, EX$block_survival_rate, CY$block_survi
 
 # Descriptive analysis per treatment
 
-# Minimum data of leaf area
+# Descriptive analysis of leaf area
 min(CX$leaf_area)
 min(EX$leaf_area)
 min(CY$leaf_area)
@@ -375,6 +375,8 @@ var(CY$leaf_area)
 var(EY$leaf_area)
 var(CZ$leaf_area)
 var(EZ$leaf_area)
+
+# Descriptive analysis of leaf number
 
 min(CX$leaf_number)
 min(EX$leaf_number)
@@ -418,7 +420,7 @@ var(EY$leaf_number)
 var(CZ$leaf_number)
 var(EZ$leaf_number)
 
-
+# Descriptive analysis of shoot dry weight
 
 min(CX$shoot_dry_weight)
 min(EX$shoot_dry_weight)
@@ -462,8 +464,7 @@ var(EY$shoot_dry_weight)
 var(CZ$shoot_dry_weight)
 var(EZ$shoot_dry_weight)
 
-
-
+# Descriptive analysis of root dry weight
 
 min(CX$root_dry_weight)
 min(EX$root_dry_weight)
@@ -507,6 +508,7 @@ var(EY$root_dry_weight)
 var(CZ$root_dry_weight)
 var(EZ$root_dry_weight)
 
+# Descriptive analysis of shoot fresh weight
 
 min(CX$shoot_fresh_weight)
 min(EX$shoot_fresh_weight)
@@ -550,7 +552,7 @@ var(EY$shoot_fresh_weight)
 var(CZ$shoot_fresh_weight)
 var(EZ$shoot_fresh_weight)
 
-
+# Descriptive analysis of root fresh weight
 
 min(CX$root_fresh_weight)
 min(EX$root_fresh_weight)
@@ -594,7 +596,7 @@ var(EY$root_fresh_weight)
 var(CZ$root_fresh_weight)
 var(EZ$root_fresh_weight)
 
-
+# Descriptive analysis of plant height
 
 min(CX$plant_height)
 min(EX$plant_height)
@@ -638,8 +640,7 @@ var(EY$plant_height)
 var(CZ$plant_height)
 var(EZ$plant_height)
 
-
-
+# Descriptive analysis of stem diameter
 
 min(CX$stem_diameter)
 min(EX$stem_diameter)
@@ -683,6 +684,7 @@ var(EY$stem_diameter)
 var(CZ$stem_diameter)
 var(EZ$stem_diameter)
 
+# Descriptive analysis of shoot length
 
 min(CX$shoot_length)
 min(EX$shoot_length)
@@ -726,7 +728,7 @@ var(EY$shoot_length)
 var(CZ$shoot_length)
 var(EZ$shoot_length)
 
-
+# Descriptive analysis of root length
 
 min(CX$root_length)
 min(EX$root_length)
@@ -770,7 +772,7 @@ var(EY$root_length)
 var(CZ$root_length)
 var(EZ$root_length)
 
-
+# Descriptive analysis of root to shoot ratio
 
 min(CX$root_to_shoot_ratio)
 min(EX$root_to_shoot_ratio)
@@ -813,3 +815,87 @@ var(CY$root_to_shoot_ratio)
 var(EY$root_to_shoot_ratio)
 var(CZ$root_to_shoot_ratio)
 var(EZ$root_to_shoot_ratio)
+
+# Descriptive analysis per treatment
+
+summary(md)
+summary(CX)
+summary(EX)
+summary(CY)
+summary(EY)
+summary(CZ)
+summary(EZ)
+
+# Boxplot per treatment
+
+boxplot(leaf_area ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Leaf Area",
+        main = "Leaf Area by Treatment")
+
+boxplot(leaf_number ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Leaf Number",
+        main = "Leaf Number by Treatment")
+
+boxplot(shoot_dry_weight ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Shoot Dry Weight",
+        main = "Shoot Dry Weight by Treatment")
+
+boxplot(root_dry_weight ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Root Dry Weight",
+        main = "Root Dry Weight by Treatment")
+
+boxplot(shoot_fresh_weight ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Shoot Fresh Weight",
+        main = "Shoot Fresh Weight by Treatment")
+
+boxplot(root_fresh_weight ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Root Fresh Weight",
+        main = "Root Fresh Weight by Treatment")
+
+boxplot(root_fresh_weight ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Root Fresh Weight",
+        main = "Root Fresh Weight by Treatment")
+
+boxplot(plant_height ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Plant Height",
+        main = "Plant Height by Treatment")
+
+boxplot(stem_diameter ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Stem Diameter",
+        main = "Stem Diameter by Treatment")
+
+boxplot(shoot_length ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Shoot Length",
+        main = "Shoot Length by Treatment")
+
+boxplot(root_length ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Root Length",
+        main = "Root Length by Treatment")
+
+boxplot(root_to_shoot_ratio ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Root to Shoot Ratio",
+        main = "Root to Shoot Ratio by Treatment")
