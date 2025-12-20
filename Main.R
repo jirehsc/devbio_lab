@@ -216,8 +216,7 @@ for (tr in trait_cols) {
 # visualize trait
 boxplot(clean$root_fresh_weight)
 
-<<<<<<< HEAD
-=======
+
 # Normality Test per treatment
 shapiro.test(CX$leaf_area)
 shapiro.test(EX$leaf_area)
@@ -917,4 +916,3 @@ boxplot(root_to_shoot_ratio ~ group,
         main = "Root to Shoot Ratio by Treatment")
 
 
->>>>>>> b41dbcee005e5f5e5f4abed4ade91b8e7fc63dc7
