@@ -330,3 +330,114 @@ fligner.test(list(CX$root_to_shoot_ratio, EX$root_to_shoot_ratio, CY$root_to_sho
 fligner.test(list(CX$health_status, EX$health_status, CY$health_status, EY$health_status, CZ$health_status, EZ$health_status))
 fligner.test(list(CX$block_mortality_rate, EX$block_mortality_rate, CY$block_mortality_rate, EY$block_mortality_rate, CZ$block_mortality_rate, EZ$block_mortality_rate))
 fligner.test(list(CX$block_survival_rate, EX$block_survival_rate, CY$block_survival_rate, EY$block_survival_rate, CZ$block_survival_rate, EZ$block_survival_rate))
+
+# Load required library if not already loaded
+library(car)
+
+# Define your trait columns (excluding derived ratios or rates for now)
+trait_cols <- c(
+  "leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight", 
+  "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight", 
+  "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit", 
+  "plant_height", "stem_diameter", "shoot_length", "root_length"
+)
+
+# Create results dataframe to store p-values
+levene_results <- data.frame(
+  Trait = trait_cols,
+  Levene_p_value = NA,
+  Assumption_met = NA,
+  stringsAsFactors = FALSE
+)
+
+# Run Levene's test for each trait
+for (trait in trait_cols) {
+  # Check if trait exists and has no missing values in any group
+  if (trait %in% names(md_groups)) {
+    levene_test <- leveneTest(as.formula(paste(trait, "~ group")), data = md_groups)
+    
+    # Store results
+    levene_results[levene_results$Trait == trait, "Levene_p_value"] <- levene_test$`Pr(>F)`[1]
+    
+    # Assumption met if p > 0.05
+    levene_results[levene_results$Trait == trait, "Assumption_met"] <- 
+      ifelse(levene_results[levene_results$Trait == trait, "Levene_p_value"] > 0.05, 
+             "YES", "NO")
+  }
+}
+
+# Display results table
+print("Levene's Test for Homogeneity of Variance:")
+print(levene_results)
+
+# Summary of assumptions met
+cat("\nSummary:\n")
+cat("Traits meeting homogeneity assumption (p > 0.05):", 
+    sum(levene_results$Assumption_met == "YES"), "out of", nrow(levene_results), "\n")
+
+# Create publication-ready table
+library(knitr)
+kable(levene_results, digits = 4, caption = "Levene's Test Results for Homogeneity of Variance")
+
+# Visualize variance differences with boxplots for key traits
+par(mfrow = c(2, 3))
+key_traits <- c("leaf_area", "shoot_dry_weight", "root_dry_weight", 
+                "plant_height", "root_length", "leaf_rwc")
+for (trait in key_traits) {
+  boxplot(as.formula(paste(trait, "~ group")), data = md_groups,
+          main = paste("Variance by Group:", trait),
+          ylab = trait, xlab = "Treatment Group")
+}
+par(mfrow = c(1, 1))
+
+##########33
+###### FLIGNER-KILLEEN TEST (RECOMMENDED FOR YOUR DATA) ######
+
+fligner_results <- data.frame(
+  Trait = trait_cols,
+  Fligner_p_value = NA,
+  Assumption_met = NA
+)
+
+for (trait in trait_cols) {
+  if (trait %in% names(md_groups)) {
+    fligner_test <- fligner.test(as.formula(paste(trait, "~ group")), data = md_groups)
+    fligner_results[fligner_results$Trait == trait, "Fligner_p_value"] <- fligner_test$p.value
+    fligner_results[fligner_results$Trait == trait, "Assumption_met"] <- 
+      ifelse(fligner_results[fligner_results$Trait == trait, "Fligner_p_value"] > 0.05, "YES", "NO")
+  }
+}
+
+print("Fligner-Killeen Test Results (Recommended for non-normal data):")
+print(fligner_results)
+
+
+
+#Main Grouped Boxplot (All Traits)
+
+library(ggplot2)
+library(tidyr)
+library(ggpubr)
+
+# Convert to long format
+long_data <- md_groups %>%
+  pivot_longer(cols = trait_cols, names_to = "Trait", values_to = "Value") %>%
+  filter(!is.na(Value))
+
+# Publication-ready faceted boxplot
+p1 <- ggplot(long_data, aes(x = group, y = Value, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 2) +
+  facet_wrap(~ Trait, scales = "free_y", ncol = 4) +
+  scale_fill_manual(values = c("CX"="#1f77b4", "EX"="#ff7f0e", "CY"="#2ca02c", 
+                               "EY"="#d62728", "CZ"="#9467bd", "EZ"="#8c564b")) +
+  labs(title = "Plant Traits by Treatment Group", 
+       subtitle = "CX=Control, EX=Control+Ethanol, CY=S1, EY=S1+Ethanol, CZ=S2, EZ=S2+Ethanol",
+       x = "Treatment Groups", y = "Trait Values") +
+  theme_pubr() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        strip.text = element_text(size = 10, face = "bold")) +
+  stat_compare_means(method = "kruskal.test", label.y.npc = 0.99, size = 3)
+
+print(p1)
+ggsave("treatment_groups_boxplots.png", p1, width = 16, height = 12, dpi = 300)
