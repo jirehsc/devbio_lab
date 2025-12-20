@@ -84,8 +84,7 @@ clean <- clean %>%
         coalesce(root_dry_weight, 0) == 0)
   )
 
-
-# Verify/recheck
+#verify
 class(clean$block)
 class(clean$ethanol_pre_treatment)
 print(paste("Columns:", ncol(clean)))
@@ -212,12 +211,20 @@ for (tr in trait_cols) {
   clean_outliers[[out_name]] <- trait_outliers[[tr]]
 }
 
+clean_outliers <- clean %>%
+  mutate(across(all_of(trait_cols), ~ {
+    x <- .x[!is.na(.x)]
+    if(length(x) < 4) return(FALSE)  # Skip if too few data
+    Q1 <- quantile(x, 0.25)
+    Q3 <- quantile(x, 0.75)
+    IQR_val <- Q3 - Q1
+    ( .x < (Q1 - 1.5*IQR_val) | .x > (Q3 + 1.5*IQR_val) ) & !is.na(.x)
+  }, .names = "{.col}_outlier"))
+
 
 # visualize trait
 boxplot(clean$root_fresh_weight)
 
-<<<<<<< HEAD
-=======
 # Normality Test per treatment
 shapiro.test(CX$leaf_area)
 shapiro.test(EX$leaf_area)
@@ -317,11 +324,28 @@ shapiro.test(EY$block_survival_rate)
 shapiro.test(CZ$block_survival_rate)
 shapiro.test(EZ$block_survival_rate)
 
-# Homogeneity test per treatment
+################summary
+
+traits <- c("leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight", 
+            "shoot_fresh_weight", "root_fresh_weight", "plant_height", 
+            "stem_diameter", "shoot_length", "root_length", "root_to_shoot_ratio",
+            "health_status")
+
+normal_counts <- c(6, 2, 6, 5, 3, 1, 6, 4, 5, 5, 4, 3)  # p>0.05 per trait
+
+summary_table <- data.frame(
+  Trait = traits,
+  Normal = ifelse(normal_counts >= 4, "NORMAL", "NON-NORMAL"),
+  Prop_Normal = round(normal_counts/6, 2)
+)
+print(summary_table)
+
+
+#Homogeneity testing
 
 fligner.test(list(CX$leaf_area, EX$leaf_area, CY$leaf_area, EY$leaf_area, CZ$leaf_area, EZ$leaf_area))
 fligner.test(list(CX$leaf_number, EX$leaf_number, CY$leaf_number, EY$leaf_number, CZ$leaf_number, EZ$leaf_number))
-fligner.test(list(CX$shoot_dry_weight, EX$shoot_dry_weight, CY$shoot_dry_weight, EY$shoot_fresh_weight, CZ$shoot_dry_weight, EZ$shoot_dry_weight))
+fligner.test(list(CX$shoot_dry_weight, EX$shoot_dry_weight, CY$shoot_dry_weight, EY$shoot_dry_weight, CZ$shoot_dry_weight, EZ$shoot_dry_weight))
 fligner.test(list(CX$root_dry_weight, EX$root_dry_weight, CY$root_dry_weight, EY$root_dry_weight, CZ$root_dry_weight, EZ$root_dry_weight))
 fligner.test(list(CX$shoot_fresh_weight, EX$shoot_fresh_weight, CY$shoot_fresh_weight, EY$shoot_fresh_weight, CZ$shoot_fresh_weight, EZ$shoot_fresh_weight))
 fligner.test(list(CX$root_fresh_weight, EX$root_fresh_weight, CY$root_fresh_weight, EY$root_fresh_weight, CZ$root_fresh_weight, EZ$root_fresh_weight))
@@ -393,13 +417,12 @@ var(CZ$leaf_area)
 var(EZ$leaf_area)
 
 # Descriptive analysis of leaf number
-
-min(CX$leaf_number)
-min(EX$leaf_number)
-min(CY$leaf_number)
-min(EY$leaf_number)
-min(CZ$leaf_number)
-min(EZ$leaf_number)
+min(CX$leaf_area)
+min(EX$leaf_area)
+min(CY$leaf_area)
+min(EY$leaf_area)
+min(CZ$leaf_area)
+min(EZ$leaf_area)
 
 max(CX$leaf_number)
 max(EX$leaf_number)
@@ -917,4 +940,14 @@ boxplot(root_to_shoot_ratio ~ group,
         main = "Root to Shoot Ratio by Treatment")
 
 
->>>>>>> b41dbcee005e5f5e5f4abed4ade91b8e7fc63dc7
+# Base R boxplot with colors
+boxplot(root_to_shoot_ratio ~ group,
+        data = md_groups,
+        xlab = "Treatment Group",
+        ylab = "Root to Shoot Ratio",
+        main = "Root to Shoot Ratio by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"),  # Fill colors for CX,EX,CY,EY,CZ,EZ
+        las = 2)  # Rotate x-labels
+
+
+
