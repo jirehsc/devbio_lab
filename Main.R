@@ -874,81 +874,85 @@ boxplot(leaf_area ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Leaf Area",
-        main = "Leaf Area by Treatment")
+        main = "Leaf Area by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(leaf_number ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Leaf Number",
-        main = "Leaf Number by Treatment")
+        main = "Leaf Number by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(shoot_dry_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Shoot Dry Weight",
-        main = "Shoot Dry Weight by Treatment")
+        main = "Shoot Dry Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_dry_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Dry Weight",
-        main = "Root Dry Weight by Treatment")
+        main = "Root Dry Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(shoot_fresh_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Shoot Fresh Weight",
-        main = "Shoot Fresh Weight by Treatment")
+        main = "Shoot Fresh Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_fresh_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Fresh Weight",
-        main = "Root Fresh Weight by Treatment")
+        main = "Root Fresh Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_fresh_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Fresh Weight",
-        main = "Root Fresh Weight by Treatment")
+        main = "Root Fresh Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(plant_height ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Plant Height",
-        main = "Plant Height by Treatment")
+        main = "Plant Height by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(stem_diameter ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Stem Diameter",
-        main = "Stem Diameter by Treatment")
+        main = "Stem Diameter by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(shoot_length ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Shoot Length",
-        main = "Shoot Length by Treatment")
+        main = "Shoot Length by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_length ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Length",
-        main = "Root Length by Treatment")
+        main = "Root Length by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
-boxplot(root_to_shoot_ratio ~ group,
-        data = md_groups,
-        xlab = "Treatment Group",
-        ylab = "Root to Shoot Ratio",
-        main = "Root to Shoot Ratio by Treatment")
-
-
-# Base R boxplot with colors
 boxplot(root_to_shoot_ratio ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root to Shoot Ratio",
         main = "Root to Shoot Ratio by Treatment",
-        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))  # Fill colors for CX,EX,CY,EY,CZ,EZ)  
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
+
 
 
