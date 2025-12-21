@@ -1,0 +1,93 @@
+---
+title: "Inferential Statistics"
+author: "Planco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
+                      fig.width = 10, fig.height = 6, dpi = 300)
+
+library(tidyverse)
+library(car)
+library(emmeans)
+library(MASS)
+library(janitor)
+library(knitr)
+
+md_groups$group <- factor(md_groups$group, levels = c("CX","EX","CY","EY","CZ","EZ"))
+md_groups$block <- factor(md_groups$block)
+```
+
+```{r}
+d <- read.csv("metadata2.csv", header = TRUE)
+
+clean <- md %>%
+  clean_names() %>%  
+  mutate(
+    across(c(leaf_area, leaf_number, shoot_dry_weight, root_dry_weight, 
+             shoot_fresh_weight, root_fresh_weight, plant_height, 
+             stem_diameter, shoot_length, root_length, root_to_shoot_ratio),
+           ~ as.numeric(.x)),
+    block = as.factor(block)
+  ) %>%
+  filter(!(coalesce(leaf_area, 0) == 0 & coalesce(leaf_number, 0) == 0 &
+           coalesce(shoot_dry_weight, 0) == 0 & coalesce(root_dry_weight, 0) == 0))
+
+md_groups <- clean %>%
+  mutate(
+    saline_treatment = factor(saline_treatment, levels = c(0, 50, 100), 
+                             labels = c("Control", "S1", "S2")),
+    ethanol_pre_treatment = factor(ethanol_pre_treatment, levels = c(0, 20), 
+                                  labels = c("None", "Ethanol")),
+    group = case_when(
+      saline_treatment == "Control" & ethanol_pre_treatment == "None" ~ "CX",
+      saline_treatment == "Control" & ethanol_pre_treatment == "Ethanol" ~ "EX",
+      saline_treatment == "S1" & ethanol_pre_treatment == "None" ~ "CY",
+      saline_treatment == "S1" & ethanol_pre_treatment == "Ethanol" ~ "EY",
+      saline_treatment == "S2" & ethanol_pre_treatment == "None" ~ "CZ",
+      saline_treatment == "S2" & ethanol_pre_treatment == "Ethanol" ~ "EZ",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(group)) %>%
+  mutate(group = factor(group, levels = c("CX","EX","CY","EY","CZ","EZ")),
+         block = factor(block))
+
+head(md_groups)
+
+```
+
+```{r}
+# 1. Meeting assumptions; Transformation of Data using log and box cox (Non-normal traits: Leaf_number, sfw, rfw)
+
+  #Transform shoot fresh weight to normal using log
+md_groups$log_shoot_fresh_weight <- log(md_groups$shoot_fresh_weight + 0.01)
+
+  #Transform root fresh weight and leaf number to normal using box cox with plot
+# Leaf number 
+model_leaf <- lm((leaf_number + 0.5) ~ group + block, data = md_groups)
+bc_leaf <- boxcox(model_leaf); lambda_leaf <- bc_leaf$x[which.max(bc_leaf$y)]
+md_groups$bc_leaf_number <- ((md_groups$leaf_number + 0.5)^lambda_leaf - 1)/lambda_leaf
+
+#qqplot
+par(mfrow=c(1,2)); 
+qqnorm(residuals(lm(leaf_number~group+block,md_groups)),main="Leaf Orig");qqline(residuals(lm(leaf_number~group+block,md_groups)),col="red")
+qqnorm(residuals(lm(bc_leaf_number~group+block,md_groups)),main=paste("Leaf λ=",round(lambda_leaf,2)));qqline(residuals(lm(bc_leaf_number~group+block,md_groups)),col="blue")
+par(mfrow=c(1,1))
+
+# Root fresh weight 
+model_rfw <- lm(root_fresh_weight ~ group + block, data = md_groups)
+bc_rfw <- boxcox(model_rfw); lambda_rfw <- bc_rfw$x[which.max(bc_rfw$y)]
+md_groups$bc_root_fresh_weight <- (md_groups$root_fresh_weight^lambda_rfw - 1)/lambda_rfw  
+
+#qqplot 
+par(mfrow=c(1,2))
+qqnorm(residuals(lm(root_fresh_weight~group+block,md_groups)), main="RFW - Original"); qqline(residuals(lm(root_fresh_weight~group+block,md_groups)), col="red")
+qqnorm(residuals(lm(bc_root_fresh_weight~group+block,md_groups)), main=paste("RFW Box-Cox λ=",round(lambda_rfw,2))); qqline(residuals(lm(bc_root_fresh_weight~group+block,md_groups)), col="blue")
+par(mfrow=c(1,1))
+
+
+```
+
