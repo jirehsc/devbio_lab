@@ -369,6 +369,7 @@ fligner.test(list(CX$health_status, EX$health_status, CY$health_status, EY$healt
 fligner.test(list(CX$block_mortality_rate, EX$block_mortality_rate, CY$block_mortality_rate, EY$block_mortality_rate, CZ$block_mortality_rate, EZ$block_mortality_rate))
 fligner.test(list(CX$block_survival_rate, EX$block_survival_rate, CY$block_survival_rate, EY$block_survival_rate, CZ$block_survival_rate, EZ$block_survival_rate))
 
+
 leveneTest(leaf_area ~ group, data = md_groups)
 leveneTest(leaf_number ~ group, data = md_groups)
 leveneTest(shoot_dry_weight ~ group, data = md_groups)
