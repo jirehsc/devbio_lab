@@ -225,6 +225,7 @@ clean_outliers <- clean %>%
 # visualize trait
 boxplot(clean$root_fresh_weight)
 
+
 # Normality Test per treatment
 shapiro.test(CX$leaf_area)
 shapiro.test(EX$leaf_area)
@@ -352,8 +353,7 @@ summary_table <- data.frame(
 print(summary_table)
 
 
-#Homogeneity testing
-
+# Homogeneity testing
 fligner.test(list(CX$leaf_area, EX$leaf_area, CY$leaf_area, EY$leaf_area, CZ$leaf_area, EZ$leaf_area))
 fligner.test(list(CX$leaf_number, EX$leaf_number, CY$leaf_number, EY$leaf_number, CZ$leaf_number, EZ$leaf_number))
 fligner.test(list(CX$shoot_dry_weight, EX$shoot_dry_weight, CY$shoot_dry_weight, EY$shoot_dry_weight, CZ$shoot_dry_weight, EZ$shoot_dry_weight))
@@ -882,196 +882,354 @@ boxplot(leaf_area ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Leaf Area",
-        main = "Leaf Area by Treatment")
+        main = "Leaf Area by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(leaf_number ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Leaf Number",
-        main = "Leaf Number by Treatment")
+        main = "Leaf Number by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(shoot_dry_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Shoot Dry Weight",
-        main = "Shoot Dry Weight by Treatment")
+        main = "Shoot Dry Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_dry_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Dry Weight",
-        main = "Root Dry Weight by Treatment")
+        main = "Root Dry Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(shoot_fresh_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Shoot Fresh Weight",
-        main = "Shoot Fresh Weight by Treatment")
+        main = "Shoot Fresh Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_fresh_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Fresh Weight",
-        main = "Root Fresh Weight by Treatment")
+        main = "Root Fresh Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_fresh_weight ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Fresh Weight",
-        main = "Root Fresh Weight by Treatment")
+        main = "Root Fresh Weight by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(plant_height ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Plant Height",
-        main = "Plant Height by Treatment")
+        main = "Plant Height by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(stem_diameter ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Stem Diameter",
-        main = "Stem Diameter by Treatment")
+        main = "Stem Diameter by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(shoot_length ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Shoot Length",
-        main = "Shoot Length by Treatment")
+        main = "Shoot Length by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
 boxplot(root_length ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root Length",
-        main = "Root Length by Treatment")
+        main = "Root Length by Treatment",
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
-boxplot(root_to_shoot_ratio ~ group,
-        data = md_groups,
-        xlab = "Treatment Group",
-        ylab = "Root to Shoot Ratio",
-        main = "Root to Shoot Ratio by Treatment")
-
-
-# Base R boxplot with colors
 boxplot(root_to_shoot_ratio ~ group,
         data = md_groups,
         xlab = "Treatment Group",
         ylab = "Root to Shoot Ratio",
         main = "Root to Shoot Ratio by Treatment",
-        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"),  # Fill colors for CX,EX,CY,EY,CZ,EZ
-        las = 2)  # Rotate x-labels
+        col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
+
+# Bar plot by traits
+library(dplyr)
+library(ggplot2)
+
+# Summarize data of leaf area (mean ± SE)
+leaf_area_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(leaf_area, na.rm = TRUE),
+    se   = sd(leaf_area, na.rm = TRUE) / sqrt(n())
+  )
+
+# Bar plot for leaf area
+ggplot(leaf_area_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Leaf Area by Treatment",
+    x = "Treatment Group",
+    y = "Leaf Area"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of leaf number (mean ± SE)
+leaf_number_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(leaf_number, na.rm = TRUE),
+    se   = sd(leaf_number, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for leaf number
+ggplot(leaf_number_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Leaf Number by Treatment",
+    x = "Treatment Group",
+    y = "Leaf Number"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of shoot dry weight (mean ± SE)
+shoot_dry_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(shoot_dry_weight, na.rm = TRUE),
+    se   = sd(shoot_dry_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for shoot dry weight
+ggplot(shoot_dry_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Shoot Dry Weight by Treatment",
+    x = "Treatment Group",
+    y = "Shoot Dry Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root dry weight (mean ± SE)
+root_dry_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_dry_weight, na.rm = TRUE),
+    se   = sd(root_dry_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root dry weight
+ggplot(root_dry_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root Dry Weight by Treatment",
+    x = "Treatment Group",
+    y = "Root Dry Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of shoot fresh weight (mean ± SE)
+shoot_fresh_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(shoot_fresh_weight, na.rm = TRUE),
+    se   = sd(shoot_fresh_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for shoot fresh weight
+ggplot(shoot_fresh_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Shoot Fresh Weight by Treatment",
+    x = "Treatment Group",
+    y = "Shoot Fresh Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root fresh weight (mean ± SE)
+root_fresh_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_fresh_weight, na.rm = TRUE),
+    se   = sd(root_fresh_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root fresh weight
+ggplot(root_fresh_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root Fresh Weight by Treatment",
+    x = "Treatment Group",
+    y = "Root Fresh Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of plant height (mean ± SE)
+plant_height_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(plant_height, na.rm = TRUE),
+    se   = sd(plant_height, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for plant height
+ggplot(plant_height_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Plant Height by Treatment",
+    x = "Treatment Group",
+    y = "Plant Height"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of stem diameter (mean ± SE)
+stem_diameter_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(stem_diameter, na.rm = TRUE),
+    se   = sd(stem_diameter, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for stem diameter 
+ggplot(stem_diameter_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Stem Diameter by Treatment",
+    x = "Treatment Group",
+    y = "Stem Diameter"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of shoot length (mean ± SE)
+shoot_length_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(shoot_length, na.rm = TRUE),
+    se   = sd(shoot_length, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for shoot length
+ggplot(shoot_length_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Shoot Length by Treatment",
+    x = "Treatment Group",
+    y = "Shoot Length"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root length (mean ± SE)
+root_length_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_length, na.rm = TRUE),
+    se   = sd(root_length, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root length
+ggplot(root_length_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root Length by Treatment",
+    x = "Treatment Group",
+    y = "Root Length"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root to shoot ratio (mean ± SE)
+root_to_shoot_ratio_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_to_shoot_ratio, na.rm = TRUE),
+    se   = sd(root_to_shoot_ratio, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root to shoot ratio
+ggplot(root_to_shoot_ratio_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root to Shoot Ratio by Treatment",
+    x = "Treatment Group",
+    y = "Root to Shoot Ratio"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
 
 
 
-# =================== INFERENTIAL STATISTICS ==========================
-
-library(tidyverse)
-library(car)
-library(emmeans)
-library(MASS)
-library(janitor)
-
-
-md_groups$group <- factor(md_groups$group, levels = c("CX","EX","CY","EY","CZ","EZ"))
-md_groups$block <- factor(md_groups$block)
-
-# 1. Meeting assumptions; Transformation of Data using log and box cox (Non-normal traits: Leaf_number, sfw, rfw)
-
-  #Transform shoot fresh weight to normal using log
-md_groups$log_shoot_fresh_weight <- log(md_groups$shoot_fresh_weight + 0.01)
-
-#Transform root fresh weight and leaf number to normal using box cox with plot
-
-# Leaf number 
-model_leaf <- lm((leaf_number + 0.5) ~ group + block, data = md_groups)
-bc_leaf <- boxcox(model_leaf); lambda_leaf <- bc_leaf$x[which.max(bc_leaf$y)]
-md_groups$bc_leaf_number <- ((md_groups$leaf_number + 0.5)^lambda_leaf - 1)/lambda_leaf
-
-  #qqplot
-par(mfrow=c(1,2)); 
-qqnorm(residuals(lm(leaf_number~group+block,md_groups)),main="Leaf Orig");qqline(residuals(lm(leaf_number~group+block,md_groups)),col="red")
-qqnorm(residuals(lm(bc_leaf_number~group+block,md_groups)),main=paste("Leaf λ=",round(lambda_leaf,2)));qqline(residuals(lm(bc_leaf_number~group+block,md_groups)),col="blue")
-par(mfrow=c(1,1))
-
-# Root fresh weight 
-model_rfw <- lm(root_fresh_weight ~ group + block, data = md_groups)
-bc_rfw <- boxcox(model_rfw); lambda_rfw <- bc_rfw$x[which.max(bc_rfw$y)]
-md_groups$bc_root_fresh_weight <- (md_groups$root_fresh_weight^lambda_rfw - 1)/lambda_rfw  
-
-#qqplot # RFW: Original vs Box-Cox
-par(mfrow=c(1,2))
-qqnorm(residuals(lm(root_fresh_weight~group+block,md_groups)), main="RFW - Original"); qqline(residuals(lm(root_fresh_weight~group+block,md_groups)), col="red")
-qqnorm(residuals(lm(bc_root_fresh_weight~group+block,md_groups)), main=paste("RFW Box-Cox λ=",round(lambda_rfw,2))); qqline(residuals(lm(bc_root_fresh_weight~group+block,md_groups)), col="blue")
-par(mfrow=c(1,1))
-
-#2.check normality again with transformed data: summary table for all traits showing "NORMAL" or NON-NORMAL"
-
-all_traits <- c("leaf_area", "bc_leaf_number", "shoot_dry_weight", "root_dry_weight", 
-                "log_shoot_fresh_weight", "bc_root_fresh_weight", "plant_height", 
-                "stem_diameter", "shoot_length", "root_length", "root_to_shoot_ratio")
-
-normality_table <- data.frame(
-  Trait = all_traits,
-  Normal_Groups = sapply(all_traits, function(trait) {
-    count <- 0
-    for(g in c("CX","EX","CY","EY","CZ","EZ")) {
-      x <- na.omit(md_groups[[trait]][md_groups$group == g])
-      if(length(x) >= 3 && shapiro.test(x)$p.value > 0.05) count <- count + 1
-    }
-    count
-  }),
-  Prop = sapply(all_traits, function(trait) paste0(
-    sum(sapply(c("CX","EX","CY","EY","CZ","EZ"), function(g){
-      x <- na.omit(md_groups[[trait]][md_groups$group == g]); length(x)>=3 && shapiro.test(x)$p.value>0.05
-    })), "/6")),
-  Status = sapply(all_traits, function(trait) {
-    n <- sum(sapply(c("CX","EX","CY","EY","CZ","EZ"), function(g){
-      x <- na.omit(md_groups[[trait]][md_groups$group == g]); length(x)>=3 && shapiro.test(x)$p.value>0.05
-    }))
-    ifelse(n>=4, "NORMAL", "NON-NORMAL")
-  })
-); print(normality_table)
-
-# DEFINE traits_final
-traits_final <- all_traits
-
-# 3. RCBD one-way anova 
-
-  #fit model
-rcbd_models <- lapply(traits_final, function(trait) {
-  formula <- as.formula(paste(trait, "~ group + block"))
-  lm(formula, data = md_groups)
-})
-
-  #apply to all traits
-rcbd_anova_results <- lapply(rcbd_models, anova)
-names(rcbd_anova_results) <- traits_final
-
-  #view result to each trait
-cat("RCBD ANOVA RESULTS PER TRAIT:\n")
-for(i in seq_along(rcbd_anova_results)) {
-  cat("\n=== ", traits_final[i], " ===\n")
-  print(rcbd_anova_results[[i]])
-}
-
-# 4. Post hoc test for significant traits (p<0.05 ONLY). 
-
-cat("\n=== POST-HOC TUKEYHSD (Leaf Area & Leaf Number Only) ===\n")
-
-# Leaf Area
-model_leaf_area <- aov(leaf_area ~ group + block, data = md_groups)
-cat("Leaf Area ANOVA p =", format.pval(anova(model_leaf_area)$"Pr(>F)"[1]), "\n")
-if(anova(model_leaf_area)$"Pr(>F)"[1] < 0.05) {
-  cat("Leaf Area TukeyHSD:\n")
-  print(TukeyHSD(model_leaf_area)$group[, "p adj"])
-}
-
-cat("\n")
-
-# Leaf Number (transformed)
-model_leaf_num <- aov(bc_leaf_number ~ group + block, data = md_groups)
-cat("Leaf Number ANOVA p =", format.pval(anova(model_leaf_num)$"Pr(>F)"[1]), "\n")
-if(anova(model_leaf_num)$"Pr(>F)"[1] < 0.05) {
-  cat("Leaf Number TukeyHSD:\n")
-  print(TukeyHSD(model_leaf_num)$group[, "p adj"])
-}
 
