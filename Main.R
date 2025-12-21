@@ -324,6 +324,17 @@ shapiro.test(EY$block_survival_rate)
 shapiro.test(CZ$block_survival_rate)
 shapiro.test(EZ$block_survival_rate)
 
+
+#list of traits that cannot be tested due to limited sample size: leaf fresh weight, lead dw, leaf rwc, water deficit, turgid weight
+shapiro.test(CX$leaf_fresh_weight)  #cant be testesd
+shapiro.test(EX$leaf_rwc)
+shapiro.test(CY$turgid_weight)
+shapiro.test(EY$leaf_dry_weight)
+shapiro.test(CZ$water_deficit)
+
+
+
+
 ################summary
 
 traits <- c("leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight", 
@@ -950,4 +961,117 @@ boxplot(root_to_shoot_ratio ~ group,
         las = 2)  # Rotate x-labels
 
 
+
+# =================== INFERENTIAL STATISTICS ==========================
+
+library(tidyverse)
+library(car)
+library(emmeans)
+library(MASS)
+library(janitor)
+
+
+md_groups$group <- factor(md_groups$group, levels = c("CX","EX","CY","EY","CZ","EZ"))
+md_groups$block <- factor(md_groups$block)
+
+# 1. Meeting assumptions; Transformation of Data using log and box cox (Non-normal traits: Leaf_number, sfw, rfw)
+
+  #Transform shoot fresh weight to normal using log
+md_groups$log_shoot_fresh_weight <- log(md_groups$shoot_fresh_weight + 0.01)
+
+#Transform root fresh weight and leaf number to normal using box cox with plot
+
+# Leaf number 
+model_leaf <- lm((leaf_number + 0.5) ~ group + block, data = md_groups)
+bc_leaf <- boxcox(model_leaf); lambda_leaf <- bc_leaf$x[which.max(bc_leaf$y)]
+md_groups$bc_leaf_number <- ((md_groups$leaf_number + 0.5)^lambda_leaf - 1)/lambda_leaf
+
+  #qqplot
+par(mfrow=c(1,2)); 
+qqnorm(residuals(lm(leaf_number~group+block,md_groups)),main="Leaf Orig");qqline(residuals(lm(leaf_number~group+block,md_groups)),col="red")
+qqnorm(residuals(lm(bc_leaf_number~group+block,md_groups)),main=paste("Leaf λ=",round(lambda_leaf,2)));qqline(residuals(lm(bc_leaf_number~group+block,md_groups)),col="blue")
+par(mfrow=c(1,1))
+
+# Root fresh weight 
+model_rfw <- lm(root_fresh_weight ~ group + block, data = md_groups)
+bc_rfw <- boxcox(model_rfw); lambda_rfw <- bc_rfw$x[which.max(bc_rfw$y)]
+md_groups$bc_root_fresh_weight <- (md_groups$root_fresh_weight^lambda_rfw - 1)/lambda_rfw  
+
+#qqplot # RFW: Original vs Box-Cox
+par(mfrow=c(1,2))
+qqnorm(residuals(lm(root_fresh_weight~group+block,md_groups)), main="RFW - Original"); qqline(residuals(lm(root_fresh_weight~group+block,md_groups)), col="red")
+qqnorm(residuals(lm(bc_root_fresh_weight~group+block,md_groups)), main=paste("RFW Box-Cox λ=",round(lambda_rfw,2))); qqline(residuals(lm(bc_root_fresh_weight~group+block,md_groups)), col="blue")
+par(mfrow=c(1,1))
+
+#2.check normality again with transformed data: summary table for all traits showing "NORMAL" or NON-NORMAL"
+
+all_traits <- c("leaf_area", "bc_leaf_number", "shoot_dry_weight", "root_dry_weight", 
+                "log_shoot_fresh_weight", "bc_root_fresh_weight", "plant_height", 
+                "stem_diameter", "shoot_length", "root_length", "root_to_shoot_ratio")
+
+normality_table <- data.frame(
+  Trait = all_traits,
+  Normal_Groups = sapply(all_traits, function(trait) {
+    count <- 0
+    for(g in c("CX","EX","CY","EY","CZ","EZ")) {
+      x <- na.omit(md_groups[[trait]][md_groups$group == g])
+      if(length(x) >= 3 && shapiro.test(x)$p.value > 0.05) count <- count + 1
+    }
+    count
+  }),
+  Prop = sapply(all_traits, function(trait) paste0(
+    sum(sapply(c("CX","EX","CY","EY","CZ","EZ"), function(g){
+      x <- na.omit(md_groups[[trait]][md_groups$group == g]); length(x)>=3 && shapiro.test(x)$p.value>0.05
+    })), "/6")),
+  Status = sapply(all_traits, function(trait) {
+    n <- sum(sapply(c("CX","EX","CY","EY","CZ","EZ"), function(g){
+      x <- na.omit(md_groups[[trait]][md_groups$group == g]); length(x)>=3 && shapiro.test(x)$p.value>0.05
+    }))
+    ifelse(n>=4, "NORMAL", "NON-NORMAL")
+  })
+); print(normality_table)
+
+# DEFINE traits_final
+traits_final <- all_traits
+
+# 3. RCBD one-way anova 
+
+  #fit model
+rcbd_models <- lapply(traits_final, function(trait) {
+  formula <- as.formula(paste(trait, "~ group + block"))
+  lm(formula, data = md_groups)
+})
+
+  #apply to all traits
+rcbd_anova_results <- lapply(rcbd_models, anova)
+names(rcbd_anova_results) <- traits_final
+
+  #view result to each trait
+cat("RCBD ANOVA RESULTS PER TRAIT:\n")
+for(i in seq_along(rcbd_anova_results)) {
+  cat("\n=== ", traits_final[i], " ===\n")
+  print(rcbd_anova_results[[i]])
+}
+
+# 4. Post hoc test for significant traits (p<0.05 ONLY). 
+
+cat("\n=== POST-HOC TUKEYHSD (Leaf Area & Leaf Number Only) ===\n")
+
+# Leaf Area
+model_leaf_area <- aov(leaf_area ~ group + block, data = md_groups)
+cat("Leaf Area ANOVA p =", format.pval(anova(model_leaf_area)$"Pr(>F)"[1]), "\n")
+if(anova(model_leaf_area)$"Pr(>F)"[1] < 0.05) {
+  cat("Leaf Area TukeyHSD:\n")
+  print(TukeyHSD(model_leaf_area)$group[, "p adj"])
+}
+
+cat("\n")
+
+# Leaf Number (transformed)
+model_leaf_num <- aov(bc_leaf_number ~ group + block, data = md_groups)
+cat("Leaf Number ANOVA p =", format.pval(anova(model_leaf_num)$"Pr(>F)"[1]), "\n")
+if(anova(model_leaf_num)$"Pr(>F)"[1] < 0.05) {
+  cat("Leaf Number TukeyHSD:\n")
+  print(TukeyHSD(model_leaf_num)$group[, "p adj"])
+}
 
