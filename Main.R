@@ -954,5 +954,270 @@ boxplot(root_to_shoot_ratio ~ group,
         main = "Root to Shoot Ratio by Treatment",
         col = c("lightblue", "orange", "lightgreen", "pink", "purple", "yellow"))
 
+# Bar plot by traits
+library(dplyr)
+library(ggplot2)
 
+# Summarize data of leaf area (mean ± SE)
+leaf_area_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(leaf_area, na.rm = TRUE),
+    se   = sd(leaf_area, na.rm = TRUE) / sqrt(n())
+  )
 
+# Bar plot for leaf area
+ggplot(leaf_area_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Leaf Area by Treatment",
+    x = "Treatment Group",
+    y = "Leaf Area"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of leaf number (mean ± SE)
+leaf_number_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(leaf_number, na.rm = TRUE),
+    se   = sd(leaf_number, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for leaf number
+ggplot(leaf_number_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Leaf Number by Treatment",
+    x = "Treatment Group",
+    y = "Leaf Number"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of shoot dry weight (mean ± SE)
+shoot_dry_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(shoot_dry_weight, na.rm = TRUE),
+    se   = sd(shoot_dry_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for shoot dry weight
+ggplot(shoot_dry_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Shoot Dry Weight by Treatment",
+    x = "Treatment Group",
+    y = "Shoot Dry Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root dry weight (mean ± SE)
+root_dry_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_dry_weight, na.rm = TRUE),
+    se   = sd(root_dry_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root dry weight
+ggplot(root_dry_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root Dry Weight by Treatment",
+    x = "Treatment Group",
+    y = "Root Dry Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of shoot fresh weight (mean ± SE)
+shoot_fresh_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(shoot_fresh_weight, na.rm = TRUE),
+    se   = sd(shoot_fresh_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for shoot fresh weight
+ggplot(shoot_fresh_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Shoot Fresh Weight by Treatment",
+    x = "Treatment Group",
+    y = "Shoot Fresh Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root fresh weight (mean ± SE)
+root_fresh_weight_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_fresh_weight, na.rm = TRUE),
+    se   = sd(root_fresh_weight, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root fresh weight
+ggplot(root_fresh_weight_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root Fresh Weight by Treatment",
+    x = "Treatment Group",
+    y = "Root Fresh Weight"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of plant height (mean ± SE)
+plant_height_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(plant_height, na.rm = TRUE),
+    se   = sd(plant_height, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for plant height
+ggplot(plant_height_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Plant Height by Treatment",
+    x = "Treatment Group",
+    y = "Plant Height"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of stem diameter (mean ± SE)
+stem_diameter_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(stem_diameter, na.rm = TRUE),
+    se   = sd(stem_diameter, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for stem diameter 
+ggplot(stem_diameter_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Stem Diameter by Treatment",
+    x = "Treatment Group",
+    y = "Stem Diameter"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of shoot length (mean ± SE)
+shoot_length_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(shoot_length, na.rm = TRUE),
+    se   = sd(shoot_length, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for shoot length
+ggplot(shoot_length_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Shoot Length by Treatment",
+    x = "Treatment Group",
+    y = "Shoot Length"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root length (mean ± SE)
+root_length_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_length, na.rm = TRUE),
+    se   = sd(root_length, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root length
+ggplot(root_length_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root Length by Treatment",
+    x = "Treatment Group",
+    y = "Root Length"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
+
+# Summarize data of root to shoot ratio (mean ± SE)
+root_to_shoot_ratio_summary <- md_groups %>%
+  group_by(group) %>%
+  summarise(
+    mean = mean(root_to_shoot_ratio, na.rm = TRUE),
+    se   = sd(root_to_shoot_ratio, na.rm = TRUE) / sqrt(n())
+  )
+
+# Barplot for root to shoot ratio
+ggplot(root_to_shoot_ratio_summary, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.2, linewidth = 0.7) +
+  labs(
+    title = "Mean Root to Shoot Ratio by Treatment",
+    x = "Treatment Group",
+    y = "Root to Shoot Ratio"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = 12)
+  )
