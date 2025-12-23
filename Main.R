@@ -1634,6 +1634,7 @@ library(ggrepel)
 library(patchwork)
 library(scales)
 library(grid)
+library(factoextra)
 
 set.seed(42)
 
@@ -1705,7 +1706,7 @@ trait_cols <- c(
   "plant_height", "stem_diameter", "shoot_length", "root_length",
   "root_to_shoot_ratio"
 )
-
+calculate_outliers
 # keep only traits present in data
 present_traits <- intersect(trait_cols, names(clean))
 missing_traits <- setdiff(trait_cols, present_traits)
@@ -1731,19 +1732,6 @@ for (tr in names(trait_outliers)) {
   clean_outliers[[paste0(tr, "_outlier")]] <- trait_outliers[[tr]]
 }
 
-# ----------------------------
-# Correlational analysis placeholder
-# ----------------------------
-# (User's correlational analysis should be placed here.)
-# Example:
-# cor_results <- cor(clean %>% select(all_of(present_traits)), use = "pairwise.complete.obs")
-# print(cor_results)
-
-# ----------------------------
-# PCA + Heatmap pipeline (adapted from PCA2.2.R)
-# ----------------------------
-
-# User settings
 normalize_before_mean <- TRUE       # normalize per-sample before aggregating
 normalization_method <- "zscore"    # "zscore", "minmax", or "log1p"
 force_normalize_if_not <- TRUE
@@ -1918,7 +1906,7 @@ if (length(nonconst_traits) < 2) {
   
   heatmap_plot <- ggplot(heatmap_df, aes(x = trait, y = treatment, fill = value)) +
     geom_tile(color = "grey30") +
-    scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0,
+    scale_fill_gradient2(low = "#2c7fb8", mid = "#7fcdbb", high = "#edf8b1", midpoint = 0,
                          limits = c(min(heatmap_df$value, na.rm = TRUE), max(heatmap_df$value, na.rm = TRUE)),
                          name = "z-score") +
     theme_minimal(base_size = 11) +
@@ -1930,7 +1918,7 @@ if (length(nonconst_traits) < 2) {
   dendro_plot_top <- ggplot() +
     geom_segment(data = segments_df, aes(x = x, y = y, xend = xend, yend = yend), size = 0.6) +
     scale_x_continuous(expand = c(0, 0), limits = c(0.5, length(col_order) + 0.6)) +
-    theme_void()
+    theme_void() 
   
   # PCA
   pca <- prcomp(mat_scaled_pca, center = FALSE, scale. = FALSE)
@@ -1959,15 +1947,209 @@ if (length(nonconst_traits) < 2) {
     geom_text_repel(data = scores, aes(PC1, PC2, label = treatment_label), color = "red", size = 3.2, max.overlaps = Inf) +
     geom_segment(data = loadings, aes(x = 0, y = 0, xend = PC1s, yend = PC2s), arrow = arrow(length = unit(0.02, "npc")), color = "blue", alpha = 0.6) +
     geom_text_repel(data = loadings_label, aes(x = PC1s, y = PC2s, label = trait), size = 3) +
-    stat_ellipse(data = scores, aes(x = PC1, y = PC2), linetype = 2, color = "darkred", level = 0.68, inherit.aes = FALSE) +
+    stat_ellipse(data = scores, aes(x = PC1, y = PC2), linetype = 2, color = "red", level = 0.50, inherit.aes = FALSE) +
     theme_minimal() + labs(x = xlab, y = ylab) +
     theme_set(theme_bw()) + #To make the gray background white
     theme( plot.background = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) #Eliminate the grids
-  
-  
+
   combined <- (dendro_plot_top / heatmap_plot) / pca_plot + plot_layout(heights = c(0.7, 4.5, 4.0))
   print(combined)
   # ggsave("combined_heatmap_pca_top_dendro.png", combined, width = 14, height = 12, dpi = 300)
 }
 
 # End of Main.R
+colnames(mat_scaled_heat)
+
+colnames(mat_scaled_heat) <- colnames(mat_scaled_heat) |>
+  trimws() |>
+  tolower()
+
+colnames(mat_scaled_pca) <- colnames(mat_scaled_pca) |>
+  trimws() |>
+  tolower()
+
+trait_label_map <- c(
+  "root_fresh_weight"      = "RFW",
+  "plant_height"           = "PH",
+  "root_length"            = "RL",
+  "leaf_number"            = "LN",
+  "leaf_area"              = "LA",
+  "root_dry_weight"        = "RDW",
+  "root_to_shoot_ratio"    = "RSR",
+  "shoot_length"           = "SL",
+  "shoot_fresh_weight"     = "SFW",
+  "shoot_dry_weight"       = "SDW",
+  "stem_diameter"       = "SD"
+)
+
+missing_traits <- setdiff(names(trait_label_map), colnames(mat_scaled_heat))
+if (length(missing_traits) > 0) {
+  stop("These traits were NOT found in the heatmap matrix:\n",
+       paste(missing_traits, collapse = ", "))
+}
+
+existing_traits <- intersect(names(trait_label_map), colnames(mat_scaled_heat))
+missing_traits  <- setdiff(names(trait_label_map), colnames(mat_scaled_heat))
+
+colnames(mat_scaled_heat)[match(existing_traits, colnames(mat_scaled_heat))] <-
+  trait_label_map[existing_traits]
+
+if (length(missing_traits) > 0) {
+  message("Skipping missing traits: ",
+          paste(missing_traits, collapse = ", "))
+}
+
+setdiff(trait_cols, colnames(mat_scaled_heat))
+
+sapply(clean[trait_cols], function(x) {
+  c(
+    is_numeric = is.numeric(x),
+    n_na = sum(is.na(x)),
+    var = if (is.numeric(x)) var(x, na.rm = TRUE) else NA
+  )
+})
+
+#debug
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(pheatmap)
+library(tibble)
+
+trait_cols <- c(
+  "leaf_fresh_weight",
+  "leaf_dry_weight",
+  "turgid_weight",
+  "leaf_rwc",
+  "water_deficit",
+  "leaf_area",
+  "leaf_number",
+  "shoot_fresh_weight",
+  "shoot_dry_weight",
+  "root_fresh_weight",
+  "root_dry_weight",
+  "root_to_shoot_ratio",
+  "plant_height",
+  "stem_diameter",
+  "shoot_length",
+  "root_length"
+)
+
+trait_audit <- clean %>%
+  dplyr::select(dplyr::all_of(trait_cols)) %>%
+  summarise(across(
+    everything(),
+    list(
+      is_numeric = ~ is.numeric(.x),
+      n_na = ~ sum(is.na(.x)),
+      variance = ~ if (is.numeric(.x)) var(.x, na.rm = TRUE) else NA_real_
+    ),
+    .names = "{.col}__{.fn}"
+  )) %>%
+  pivot_longer(everything(),
+               names_to = c("trait", "metric"),
+               names_sep = "__") %>%
+  pivot_wider(names_from = metric, values_from = value)
+
+trait_rules <- trait_audit %>%
+  mutate(
+    include = case_when(
+      !is_numeric            ~ FALSE,
+      is.na(variance)        ~ FALSE,
+      variance == 0          ~ FALSE,
+      n_na > 0.5 * nrow(clean) ~ FALSE,
+      TRUE                   ~ TRUE
+    ),
+    exclusion_reason = case_when(
+      include ~ NA_character_,
+      !is_numeric ~ "Non-numeric",
+      is.na(variance) ~ "Variance undefined",
+      variance == 0 ~ "Zero variance",
+      n_na > 0.5 * nrow(clean) ~ "Too many missing values"
+    )
+  )
+
+write.csv(trait_rules,
+          "trait_inclusion_log.csv",
+          row.names = FALSE)
+
+#checker
+
+# 1) Check specimen-level scaled matrix (if it exists)
+if (exists("mat_spec_scaled")) {
+  cat("=== specimen-level scaled matrix check ===\n")
+  chk_spec <- is_normalized(mat_spec_scaled, mean_tol = 1e-8, sd_tol = 1e-8)
+  print(chk_spec$summary)
+  cat("All column means near 0? ", chk_spec$all_mean_ok, "\n")
+  cat("All column SDs near 1? ", chk_spec$all_sd_ok, "\n")
+  if (chk_spec$any_na) cat("Warning: some columns contain NA\n")
+  # Visuals (first 12 traits)
+  print(plot_density_by_trait(mat_spec_scaled, traits = colnames(mat_spec_scaled)[1:min(12,ncol(mat_spec_scaled))]))
+  print(plot_box_by_trait(mat_spec_scaled, traits = colnames(mat_spec_scaled)[1:min(12,ncol(mat_spec_scaled))]))
+  # QQ plots (optional)
+  # plot_qq_by_trait(mat_spec_scaled, traits = colnames(mat_spec_scaled)[1:min(12,ncol(mat_spec_scaled))], ncol = 4)
+}
+
+# 2) Check treatment-level scaled matrices (heatmap and PCA)
+if (exists("mat_scaled_heat")) {
+  cat("\n=== treatment-level heatmap scaled matrix check ===\n")
+  chk_heat <- is_normalized(mat_scaled_heat, mean_tol = 1e-8, sd_tol = 1e-8)
+  print(chk_heat$summary)
+  cat("All column means near 0? ", chk_heat$all_mean_ok, "\n")
+  cat("All column SDs near 1? ", chk_heat$all_sd_ok, "\n")
+  if (chk_heat$any_na) cat("Warning: some columns contain NA\n")
+  print(plot_density_by_trait(mat_scaled_heat, traits = colnames(mat_scaled_heat)[1:min(12,ncol(mat_scaled_heat))]))
+  print(plot_box_by_trait(mat_scaled_heat, traits = colnames(mat_scaled_heat)[1:min(12,ncol(mat_scaled_heat))]))
+}
+
+if (exists("mat_scaled_pca")) {
+  cat("\n=== treatment-level PCA scaled matrix check ===\n")
+  chk_pca <- is_normalized(mat_scaled_pca, mean_tol = 1e-8, sd_tol = 1e-8)
+  print(chk_pca$summary)
+  cat("All column means near 0? ", chk_pca$all_mean_ok, "\n")
+  cat("All column SDs near 1? ", chk_pca$all_sd_ok, "\n")
+  if (chk_pca$any_na) cat("Warning: some columns contain NA\n")
+  print(plot_density_by_trait(mat_scaled_pca, traits = colnames(mat_scaled_pca)[1:min(12,ncol(mat_scaled_pca))]))
+  print(plot_box_by_trait(mat_scaled_pca, traits = colnames(mat_scaled_pca)[1:min(12,ncol(mat_scaled_pca))]))
+}
+
+# 3) If you don't have scaled matrices and want to scale now:
+# scale_columns(mat_raw) -> z-scored matrix
+scale_columns <- function(mat_raw, center = TRUE, scale = TRUE, na.rm = TRUE) {
+  m <- as.matrix(mat_raw)
+  # scale() handles NA by overall; to be safe, compute col means/sds manually with na.rm
+  col_means <- apply(m, 2, function(x) ifelse(all(is.na(x)), NA, mean(x, na.rm = TRUE)))
+  col_sds   <- apply(m, 2, function(x) ifelse(all(is.na(x)), NA, sd(x, na.rm = TRUE)))
+  m_scaled <- sweep(m, 2, col_means, FUN = "-")
+  m_scaled <- sweep(m_scaled, 2, col_sds, FUN = "/")
+  # where col_sds == 0 or NA, leave as 0 (or NA) depending on preference
+  zero_or_na <- which(is.na(col_sds) | col_sds == 0)
+  if (length(zero_or_na) > 0) {
+    warning("Columns with zero or NA sd detected; setting scaled values to 0 for those cols: ", paste(colnames(m)[zero_or_na], collapse = ", "))
+    m_scaled[, zero_or_na] <- 0
+  }
+  return(m_scaled)
+}
+
+# Example: to create mat_spec_scaled if only have mat_spec:
+# mat_spec_scaled <- scale_columns(mat_spec)
+
+# 4) Summary: produce a table of which columns are NOT normalized (within tolerances)
+report_not_normal <- function(chk) {
+  d <- chk$summary %>%
+    filter(!mean_ok | !sd_ok) %>%
+    mutate(mean_diff = mean, sd_diff = sd) %>%
+    arrange(desc(abs(sd - 1)) + abs(mean))
+  if (nrow(d) == 0) {
+    cat("All traits pass the normalization check within tolerance.\n")
+  } else {
+    cat("Traits failing normalization check:\n")
+    print(d)
+  }
+}
+
+# Use report_not_normal(chk_spec), etc. Example:
+if (exists("chk_spec")) report_not_normal(chk_spec)
+if (exists("chk_heat")) report_not_normal(chk_heat)
+if (exists("chk_pca")) report_not_normal(chk_pca)

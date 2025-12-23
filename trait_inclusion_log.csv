@@ -1,0 +1,17 @@
+"trait","is_numeric","n_na","variance","include","exclusion_reason"
+"leaf_fresh_weight",1,14,1,FALSE,"Too many missing values"
+"leaf_dry_weight",1,13,1,FALSE,"Too many missing values"
+"turgid_weight",1,14,1,FALSE,"Too many missing values"
+"leaf_rwc",1,14,905.952906247488,FALSE,"Too many missing values"
+"water_deficit",1,14,1,FALSE,"Too many missing values"
+"leaf_area",1,0,1,TRUE,NA
+"leaf_number",1,0,1,TRUE,NA
+"shoot_fresh_weight",1,0,1,TRUE,NA
+"shoot_dry_weight",1,0,1,TRUE,NA
+"root_fresh_weight",1,0,1,TRUE,NA
+"root_dry_weight",1,0,1,TRUE,NA
+"root_to_shoot_ratio",1,0,2.08258480271917,TRUE,NA
+"plant_height",1,0,1,TRUE,NA
+"stem_diameter",1,0,1,TRUE,NA
+"shoot_length",1,0,1,TRUE,NA
+"root_length",1,0,1,TRUE,NA

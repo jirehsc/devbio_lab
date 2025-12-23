@@ -1,0 +1,162 @@
+---
+title: "Correlational Analysis"
+author: "Caranto"
+date: "2025-12-23"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(dbplyr)
+library(ggplot2)
+library(pheatmap)
+library(car)
+library(emmeans)
+library(lme4)
+library(lmerTest)
+library(janitor)
+
+md <- read.csv("metadata2.csv", header = TRUE)
+
+clean <- md %>%
+  clean_names() %>%  
+  mutate(
+    across(
+      c(leaf_area, leaf_number, shoot_dry_weight, root_dry_weight, 
+        shoot_fresh_weight, root_fresh_weight, leaf_fresh_weight, 
+        leaf_dry_weight, turgid_weight, leaf_rwc, water_deficit, 
+        plant_height, stem_diameter, shoot_length, root_length, 
+        root_to_shoot_ratio, block_mortality_rate, block_survival_rate),
+      ~ as.numeric(.x)
+    ),
+    specimen_id = as.character(specimen_id),
+    block = as.factor(block)
+  )
+
+ trait_cols <- c(
+  "leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight",
+  "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight",
+  "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit",
+  "plant_height", "stem_diameter", "shoot_length", "root_length",
+  "root_to_shoot_ratio"
+)
+
+present_traits <- intersect(trait_cols, colnames(clean))
+
+
+ cor(clean %>% select(all_of(present_traits)),
+      use = "pairwise.complete.obs")
+  X_complete <- clean %>%
+    dplyr::select(dplyr::all_of(present_traits)) %>%
+    tidyr::drop_na()
+  
+  cor_results <- cor(X_complete, use = "complete.obs")
+  
+ 
+
+```
+
+Here is the combined PCA - heatmap - dendogram plot
+
+```{plot echo=TRUE}
+plot(combined)
+
+```
+
+Proof that the all the normalization values passed within the tolerance levels.
+
+```{check echo=TRUE}
+
+library(tidyverse)
+library(dplyr)
+library(dbplyr)
+library(ggplot2)
+library(pheatmap)
+library(car)
+library(emmeans)
+library(lme4)
+library(lmerTest)
+library(janitor)
+
+if (exists("mat_spec_scaled")) {
+  cat("=== specimen-level scaled matrix check ===\n")
+  chk_spec <- is_normalized(mat_spec_scaled, mean_tol = 1e-8, sd_tol = 1e-8)
+  print(chk_spec$summary)
+  cat("All column means near 0? ", chk_spec$all_mean_ok, "\n")
+  cat("All column SDs near 1? ", chk_spec$all_sd_ok, "\n")
+  if (chk_spec$any_na) cat("Warning: some columns contain NA\n")
+  # Visuals (first 12 traits)
+  print(plot_density_by_trait(mat_spec_scaled, traits = colnames(mat_spec_scaled)[1:min(12,ncol(mat_spec_scaled))]))
+  print(plot_box_by_trait(mat_spec_scaled, traits = colnames(mat_spec_scaled)[1:min(12,ncol(mat_spec_scaled))]))
+  # QQ plots (optional)
+  # plot_qq_by_trait(mat_spec_scaled, traits = colnames(mat_spec_scaled)[1:min(12,ncol(mat_spec_scaled))], ncol = 4)
+}
+
+# 2) Check treatment-level scaled matrices (heatmap and PCA)
+if (exists("mat_scaled_heat")) {
+  cat("\n=== treatment-level heatmap scaled matrix check ===\n")
+  chk_heat <- is_normalized(mat_scaled_heat, mean_tol = 1e-8, sd_tol = 1e-8)
+  print(chk_heat$summary)
+  cat("All column means near 0? ", chk_heat$all_mean_ok, "\n")
+  cat("All column SDs near 1? ", chk_heat$all_sd_ok, "\n")
+  if (chk_heat$any_na) cat("Warning: some columns contain NA\n")
+  print(plot_density_by_trait(mat_scaled_heat, traits = colnames(mat_scaled_heat)[1:min(12,ncol(mat_scaled_heat))]))
+  print(plot_box_by_trait(mat_scaled_heat, traits = colnames(mat_scaled_heat)[1:min(12,ncol(mat_scaled_heat))]))
+}
+
+if (exists("mat_scaled_pca")) {
+  cat("\n=== treatment-level PCA scaled matrix check ===\n")
+  chk_pca <- is_normalized(mat_scaled_pca, mean_tol = 1e-8, sd_tol = 1e-8)
+  print(chk_pca$summary)
+  cat("All column means near 0? ", chk_pca$all_mean_ok, "\n")
+  cat("All column SDs near 1? ", chk_pca$all_sd_ok, "\n")
+  if (chk_pca$any_na) cat("Warning: some columns contain NA\n")
+  print(plot_density_by_trait(mat_scaled_pca, traits = colnames(mat_scaled_pca)[1:min(12,ncol(mat_scaled_pca))]))
+  print(plot_box_by_trait(mat_scaled_pca, traits = colnames(mat_scaled_pca)[1:min(12,ncol(mat_scaled_pca))]))
+}
+
+# 3) If you don't have scaled matrices and want to scale now:
+# scale_columns(mat_raw) -> z-scored matrix
+scale_columns <- function(mat_raw, center = TRUE, scale = TRUE, na.rm = TRUE) {
+  m <- as.matrix(mat_raw)
+  # scale() handles NA by overall; to be safe, compute col means/sds manually with na.rm
+  col_means <- apply(m, 2, function(x) ifelse(all(is.na(x)), NA, mean(x, na.rm = TRUE)))
+  col_sds   <- apply(m, 2, function(x) ifelse(all(is.na(x)), NA, sd(x, na.rm = TRUE)))
+  m_scaled <- sweep(m, 2, col_means, FUN = "-")
+  m_scaled <- sweep(m_scaled, 2, col_sds, FUN = "/")
+  # where col_sds == 0 or NA, leave as 0 (or NA) depending on preference
+  zero_or_na <- which(is.na(col_sds) | col_sds == 0)
+  if (length(zero_or_na) > 0) {
+    warning("Columns with zero or NA sd detected; setting scaled values to 0 for those cols: ", paste(colnames(m)[zero_or_na], collapse = ", "))
+    m_scaled[, zero_or_na] <- 0
+  }
+  return(m_scaled)
+}
+
+# Example: to create mat_spec_scaled if only have mat_spec:
+# mat_spec_scaled <- scale_columns(mat_spec)
+
+# 4) Summary: produce a table of which columns are NOT normalized (within tolerances)
+report_not_normal <- function(chk) {
+  d <- chk$summary %>%
+    filter(!mean_ok | !sd_ok) %>%
+    mutate(mean_diff = mean, sd_diff = sd) %>%
+    arrange(desc(abs(sd - 1)) + abs(mean))
+  if (nrow(d) == 0) {
+    cat("All traits pass the normalization check within tolerance.\n")
+  } else {
+    cat("Traits failing normalization check:\n")
+    print(d)
+  }
+}
+
+# Use report_not_normal(chk_spec), etc. Example:
+if (exists("chk_spec")) report_not_normal(chk_spec)
+if (exists("chk_heat")) report_not_normal(chk_heat)
+if (exists("chk_pca")) report_not_normal(chk_pca)
+
+```
