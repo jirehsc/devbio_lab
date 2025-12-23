@@ -190,19 +190,18 @@ calculate_outliers <- function(data, trait) {
   
   return(outliers_logical)
 }
-
+trait_cols <- trimws(trait_cols)
 # List of all traits
 trait_cols <- c(
   "leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight", 
   "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight", 
   "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit", 
   "plant_height", "stem_diameter", "shoot_length", "root_length", 
-  "root_to_shoot_ratio "
+  "root_to_shoot_ratio"
 )
 
 # Apply per trait and see outliers each trait
 trait_outliers <- lapply(trait_cols, function(tr) calculate_outliers(clean, tr))
-names(trait_outliers) <- trait_cols
 
 # FLAG outliers inside df (if viewed, additional coloumns, true=outliers, false=normal)
 clean_outliers <- clean
@@ -221,7 +220,8 @@ clean_outliers <- clean %>%
     ( .x < (Q1 - 1.5*IQR_val) | .x > (Q3 + 1.5*IQR_val) ) & !is.na(.x)
   }, .names = "{.col}_outlier"))
 
-
+# Sanitize ALL column names once
+colnames(clean) <- trimws(colnames(clean))
 # visualize trait
 boxplot(clean$root_fresh_weight)
 
@@ -309,7 +309,262 @@ shapiro.test(EX$health_status)
 shapiro.test(CY$health_status)
 shapiro.test(EY$health_status)
 shapiro.test(CZ$health_status)
-shapiro.test(EZ$health_status)
+#shapiro.test(EZ$health_status)
+# ----------------------------
+# Correlational analysis + PCA / Heatmap / Dendrogram (REPLACEMENT BLOCK)
+# (Paste this over your existing correlational / PCA section)
+# ----------------------------
+
+# Ensure plotting packages are available (do not attach new packages here to avoid masking)
+if (!requireNamespace("ggplot2", quietly = TRUE)) stop("Please install ggplot2")
+if (!requireNamespace("ggrepel", quietly = TRUE)) stop("Please install ggrepel")
+if (!requireNamespace("ggdendro", quietly = TRUE)) stop("Please install ggdendro")
+if (!requireNamespace("patchwork", quietly = TRUE)) stop("Please install patchwork")
+
+# Confirm required objects
+if (!exists("clean") || !exists("md_groups")) stop("Objects `clean` and/or `md_groups` not found. Run earlier sections first.")
+
+# Define trait names (trimmed)
+trait_cols <- c(
+  "leaf_area","leaf_number","shoot_dry_weight","root_dry_weight",
+  "shoot_fresh_weight","root_fresh_weight","leaf_fresh_weight",
+  "leaf_dry_weight","turgid_weight","leaf_rwc","water_deficit",
+  "plant_height","stem_diameter","shoot_length","root_length",
+  "root_to_shoot_ratio"
+)
+trait_cols <- trimws(trait_cols)
+
+# Keep only traits actually present in `clean`
+present_traits <- intersect(trait_cols, colnames(clean))
+if (length(present_traits) == 0) stop("No trait columns found in `clean` for correlational/PCA analysis.")
+
+# ---- Correlation matrix (base-R indexing) ----
+cor_results <- stats::cor(clean[, present_traits, drop = FALSE], use = "pairwise.complete.obs")
+message("Pairwise correlation (rounded 3):")
+print(round(cor_results, 3))
+
+# ---- PCA + heatmap settings ----
+normalize_before_mean <- TRUE
+normalization_method <- "zscore"   # options: "zscore","minmax","log1p"
+force_normalize_if_not <- TRUE
+
+# helper: normalization check (works on a data.frame or matrix)
+check_normalized <- function(df_numeric, method = "zscore", tol_mean = 1e-6, tol_sd = 1e-6, tol_range = 1e-6) {
+  df_numeric <- as.data.frame(df_numeric)
+  res <- data.frame(
+    trait = colnames(df_numeric),
+    mean = sapply(df_numeric, function(x) mean(x, na.rm = TRUE)),
+    sd   = sapply(df_numeric, function(x) sd(x, na.rm = TRUE)),
+    min  = sapply(df_numeric, function(x) min(x, na.rm = TRUE)),
+    max  = sapply(df_numeric, function(x) max(x, na.rm = TRUE)),
+    stringsAsFactors = FALSE
+  )
+  if (method == "zscore") {
+    res$is_normal <- (abs(res$mean) <= tol_mean) & (abs(res$sd - 1) <= tol_sd)
+    return(list(per_trait = res, all_normal = all(res$is_normal, na.rm = TRUE), method = method))
+  } else if (method == "minmax") {
+    res$is_normal <- (abs(res$min - 0) <= tol_range) & (abs(res$max - 1) <= tol_range)
+    return(list(per_trait = res, all_normal = all(res$is_normal, na.rm = TRUE), method = method))
+  } else if (method == "log1p") {
+    res$is_nonneg <- res$min >= 0
+    warning("log1p check only verifies non-negativity of raw data.")
+    return(list(per_trait = res, all_normal = all(res$is_nonneg, na.rm = TRUE), method = method))
+  } else stop("Unsupported normalization method.")
+}
+
+# helper: apply normalization (returns modified data.frame)
+normalize_df <- function(df, trait_cols, method = "zscore") {
+  out <- df
+  if (method == "zscore") {
+    for (c in trait_cols) {
+      v <- df[[c]]
+      m <- mean(v, na.rm = TRUE); s <- sd(v, na.rm = TRUE)
+      if (is.na(s) || s <= .Machine$double.eps) out[[c]] <- ifelse(is.na(v), NA, 0) else out[[c]] <- (v - m)/s
+    }
+  } else if (method == "minmax") {
+    for (c in trait_cols) {
+      v <- df[[c]]; mn <- min(v, na.rm = TRUE); mx <- max(v, na.rm = TRUE); rng <- mx - mn
+      if (is.na(rng) || rng <= .Machine$double.eps) out[[c]] <- ifelse(is.na(v), NA, 0) else out[[c]] <- (v - mn)/rng
+    }
+  } else if (method == "log1p") {
+    for (c in trait_cols) {
+      v <- df[[c]]; mn <- min(v, na.rm = TRUE)
+      if (!is.na(mn) && mn < 0) { shift <- abs(mn) + 1e-8; out[[c]] <- log1p(v + shift) } else out[[c]] <- log1p(v)
+    }
+  } else stop("Unsupported normalization method.")
+  out
+}
+
+# Build numeric trait candidates safely (base-R)
+trait_candidates <- clean[, vapply(clean, is.numeric, logical(1)), drop = FALSE]
+# drop all-NA columns
+trait_candidates <- trait_candidates[, vapply(trait_candidates, function(x) !all(is.na(x)), logical(1)), drop = FALSE]
+trait_cols_pca <- intersect(colnames(trait_candidates), present_traits)
+if (length(trait_cols_pca) == 0) stop("No numeric trait columns available for PCA/heatmap.")
+
+# Optional normalization (specimen-level)
+if (normalize_before_mean) {
+  check_res <- check_normalized(clean[, trait_cols_pca, drop = FALSE], method = normalization_method)
+  if (!isTRUE(check_res$all_normal) && force_normalize_if_not) {
+    message("Applying specimen-level normalization (", normalization_method, ")")
+    clean <- normalize_df(clean, trait_cols_pca, method = normalization_method)
+    trait_candidates <- clean[, trait_cols_pca, drop = FALSE]
+  } else {
+    message("Specimen-level traits appear normalized or no action requested.")
+  }
+}
+
+# Remove grouping columns if present in trait list (safety)
+group_cols <- c("ethanol_pre_treatment", "saline_treatment", "group", "block")
+trait_cols_pca <- setdiff(trait_cols_pca, intersect(trait_cols_pca, group_cols))
+if (length(trait_cols_pca) == 0) stop("No trait columns left for PCA after removing grouping columns.")
+
+# Aggregate to treatment means using base aggregate (robust, no tidyselect)
+agg_by_eth_sal <- aggregate(
+  x = clean[, trait_cols_pca, drop = FALSE],
+  by = list(ethanol = as.character(md_groups$ethanol_pre_treatment), saline = as.character(md_groups$saline_treatment)),
+  FUN = function(x) mean(x, na.rm = TRUE)
+)
+
+# Build df_means with proper names
+df_means <- as.data.frame(agg_by_eth_sal, stringsAsFactors = FALSE)
+# columns: ethanol, saline, then trait columns
+names(df_means)[1:2] <- c("ethanol_pre_treatment", "saline_treatment")
+
+# Convert numeric-like labels back if possible
+# Map ethanol factor labels "None"/"Ethanol" -> numeric codes, same for saline
+df_means$ethanol_val <- ifelse(tolower(df_means$ethanol_pre_treatment) %in% c("none","none "), 0,
+                               ifelse(tolower(df_means$ethanol_pre_treatment) %in% c("ethanol","ethanol "), 20, as.numeric(df_means$ethanol_pre_treatment)))
+df_means$saline_val <- ifelse(tolower(df_means$saline_treatment) %in% c("control","control "), 0,
+                              ifelse(tolower(df_means$saline_treatment) %in% c("s1","s1 "), 50,
+                                     ifelse(tolower(df_means$saline_treatment) %in% c("s2","s2 "), 100, as.numeric(df_means$saline_treatment))))
+
+df_means$treatment <- paste0("E", df_means$ethanol_val, "_S", df_means$saline_val)
+df_means$treatment_label <- df_means$treatment
+
+# optional mapping to friendly labels
+treatment_map <- c("E0_S0"="Control","E0_S50"="S1","E0_S100"="S2","E20_S0"="Eth","E20_S50"="S1 + Eth","E20_S100"="S2 + Eth")
+df_means$treatment_label <- ifelse(df_means$treatment %in% names(treatment_map), treatment_map[df_means$treatment], df_means$treatment_label)
+
+# Build matrix for heatmap/PCA (rows = treatments)
+mat <- as.matrix(df_means[, trait_cols_pca, drop = FALSE])
+rownames(mat) <- df_means$treatment_label
+
+# Guard: need at least one row
+if (nrow(mat) < 1) stop("No treatment rows in df_means; aggregation failed.")
+
+# Identify non-constant traits for PCA
+sds <- apply(mat, 2, stats::sd, na.rm = TRUE)
+nonconst_traits <- names(sds)[!(is.na(sds) | sds <= 1e-12)]
+
+# If fewer than 2 non-constant traits, draw only heatmap
+if (length(nonconst_traits) < 2) {
+  warning("Not enough non-constant traits for PCA. Drawing heatmap only.")
+  mat_scaled_heat <- scale(mat, center = TRUE, scale = TRUE)
+  mat_scaled_heat[is.na(mat_scaled_heat)] <- 0
+
+  # Build heatmap long data.frame using base-R (avoid pivot_longer)
+  heatmap_df <- do.call(rbind, lapply(seq_len(nrow(mat_scaled_heat)), function(i) {
+    data.frame(treatment = rownames(mat_scaled_heat)[i],
+               trait = colnames(mat_scaled_heat),
+               value = as.numeric(mat_scaled_heat[i, ]),
+               stringsAsFactors = FALSE)
+  }))
+
+  heatmap_df$trait <- factor(heatmap_df$trait, levels = colnames(mat_scaled_heat))
+  heatmap_df$treatment <- factor(heatmap_df$treatment, levels = rev(rownames(mat_scaled_heat)))
+
+  heatmap_plot <- ggplot2::ggplot(heatmap_df, ggplot2::aes(x = trait, y = treatment, fill = value)) +
+    ggplot2::geom_tile(color = "grey30") +
+    ggplot2::scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0, name = "z-score") +
+    ggplot2::theme_minimal() + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1), axis.title = ggplot2::element_blank())
+
+  print(heatmap_plot)
+} else {
+  # Full pipeline: heatmap + dendrogram + PCA biplot
+  mat_scaled_heat <- scale(mat, center = TRUE, scale = TRUE); mat_scaled_heat[is.na(mat_scaled_heat)] <- 0
+  mat_pca <- mat[, nonconst_traits, drop = FALSE]
+  mat_scaled_pca <- scale(mat_pca, center = TRUE, scale = TRUE); mat_scaled_pca[is.na(mat_scaled_pca)] <- 0
+
+  # Column clustering (for heatmap)
+  hc_cols <- stats::hclust(stats::dist(t(mat_scaled_heat), method = "euclidean"), method = "complete")
+  cluster_col_order <- hc_cols$labels[hc_cols$order]
+
+  # Build heatmap long df (base-R)
+  col_order <- cluster_col_order
+  col_order <- intersect(col_order, colnames(mat_scaled_heat))
+  if (length(col_order) != ncol(mat_scaled_heat)) col_order <- c(col_order, setdiff(colnames(mat_scaled_heat), col_order))
+
+  heatmap_df <- do.call(rbind, lapply(seq_len(nrow(mat_scaled_heat)), function(i) {
+    data.frame(treatment = rownames(mat_scaled_heat)[i],
+               trait = colnames(mat_scaled_heat),
+               value = as.numeric(mat_scaled_heat[i, ]),
+               stringsAsFactors = FALSE)
+  }))
+  heatmap_df$trait <- factor(heatmap_df$trait, levels = col_order)
+  heatmap_df$treatment <- factor(heatmap_df$treatment, levels = rev(rownames(mat_scaled_heat)))
+
+  heatmap_plot <- ggplot2::ggplot(heatmap_df, ggplot2::aes(x = trait, y = treatment, fill = value)) +
+    ggplot2::geom_tile(color = "grey30") +
+    ggplot2::scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0,
+                                  limits = c(min(heatmap_df$value, na.rm = TRUE), max(heatmap_df$value, na.rm = TRUE)),
+                                  name = "z-score") +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8),
+                   axis.ticks.x = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), panel.grid = ggplot2::element_blank())
+
+  # Dendrogram (top)
+  ddata <- tryCatch(ggdendro::dendro_data(hc_cols, type = "rectangle"), error = function(e) NULL)
+  if (!is.null(ddata)) {
+    segments_df <- ddata$segments
+    dendro_plot_top <- ggplot2::ggplot() +
+      ggplot2::geom_segment(data = segments_df, ggplot2::aes(x = x, y = y, xend = xend, yend = yend), size = 0.6) +
+      ggplot2::scale_x_continuous(expand = c(0,0), limits = c(0.5, length(col_order) + 0.5)) +
+      ggplot2::theme_void()
+  } else {
+    dendro_plot_top <- NULL
+    warning("Dendrogram construction failed; continuing without dendrogram.")
+  }
+
+  # PCA (biplot)
+  pca <- stats::prcomp(mat_scaled_pca, center = FALSE, scale. = FALSE)
+  scores <- as.data.frame(pca$x[, 1:2], check.names = FALSE); scores <- tibble::rownames_to_column(scores, "treatment_label")
+  colnames(scores)[2:3] <- c("PC1","PC2")
+  # Attach grouping info by base-R merge if available
+  if ("treatment_label" %in% colnames(df_means)) {
+    join_cols <- intersect(c("treatment_label","ethanol_pre_treatment","saline_treatment"), colnames(df_means))
+    if (length(join_cols) > 1) scores <- merge(scores, df_means[, join_cols, drop = FALSE], by = "treatment_label", all.x = TRUE, sort = FALSE)
+  }
+
+  loadings <- as.data.frame(pca$rotation[, 1:2], check.names = FALSE); loadings <- tibble::rownames_to_column(loadings, "trait")
+  colnames(loadings)[2:3] <- c("PC1","PC2")
+  mult <- min((max(scores$PC1)-min(scores$PC1))/(max(loadings$PC1)-min(loadings$PC1)+1e-9),
+              (max(scores$PC2)-min(scores$PC2))/(max(loadings$PC2)-min(loadings$PC2)+1e-9)) * 0.6
+  loadings$PC1s <- loadings$PC1 * mult; loadings$PC2s <- loadings$PC2 * mult
+  loadings$len <- sqrt(loadings$PC1^2 + loadings$PC2^2)
+  loadings_label <- loadings[order(-loadings$len), , drop = FALSE][1:min(18, nrow(loadings)), ]
+
+  pct_var <- function(i) round(100*(pca$sdev[i]^2/sum(pca$sdev^2)), 2)
+  xlab <- paste0("PC1 (", pct_var(1), "%)"); ylab <- paste0("PC2 (", pct_var(2), "%)")
+
+  pca_plot <- ggplot2::ggplot() +
+    ggplot2::geom_hline(yintercept = 0, color = "grey70") +
+    ggplot2::geom_vline(xintercept = 0, color = "grey70") +
+    ggplot2::geom_point(data = scores, ggplot2::aes(PC1, PC2), color = "red", size = 3) +
+    ggrepel::geom_text_repel(data = scores, ggplot2::aes(PC1, PC2, label = treatment_label), color = "red", size = 3.2, max.overlaps = Inf) +
+    ggplot2::geom_segment(data = loadings, ggplot2::aes(x = 0, y = 0, xend = PC1s, yend = PC2s), arrow = grid::arrow(length = unit(0.02, "npc")), color = "blue", alpha = 0.6) +
+    ggrepel::geom_text_repel(data = loadings_label, ggplot2::aes(x = PC1s, y = PC2s, label = trait), size = 3) +
+    ggplot2::stat_ellipse(data = scores, ggplot2::aes(x = PC1, y = PC2), linetype = 2, color = "darkred", level = 0.68, inherit.aes = FALSE) +
+    ggplot2::theme_minimal() + ggplot2::labs(x = xlab, y = ylab) + ggplot2::theme(plot.margin = ggplot2::margin(t = 6, r = 8, b = 6, l = 8))
+
+  # Combine and print (patchwork)
+  if (!is.null(dendro_plot_top)) {
+    combined <- (dendro_plot_top / heatmap_plot) / pca_plot + patchwork::plot_layout(heights = c(0.7, 4.5, 4.0))
+  } else {
+    combined <- (heatmap_plot) / pca_plot + patchwork::plot_layout(heights = c(4.5, 4.0))
+  }
+  print(combined)
+}
 
 shapiro.test(CX$block_mortality_rate)
 shapiro.test(EX$block_mortality_rate)
@@ -327,8 +582,8 @@ shapiro.test(EZ$block_survival_rate)
 
 
 #list of traits that cannot be tested due to limited sample size: leaf fresh weight, lead dw, leaf rwc, water deficit, turgid weight
-shapiro.test(CX$leaf_fresh_weight)  #cant be testesd
-shapiro.test(EX$leaf_rwc)
+#shapiro.test(CX$leaf_fresh_weight)  #cant be testesd
+#shapiro.test(EX$leaf_rwc)
 shapiro.test(CY$turgid_weight)
 shapiro.test(EY$leaf_dry_weight)
 shapiro.test(CZ$water_deficit)
@@ -1370,6 +1625,349 @@ if(anova(model_leaf_num)$"Pr(>F)"[1] < 0.05) {
 
 #============================================================
 
+# Correlational Analysis --------------------------------------------------
 
+library(tidyverse)
+library(janitor)
+library(ggdendro)
+library(ggrepel)
+library(patchwork)
+library(scales)
+library(grid)
 
+set.seed(42)
 
+# ----------------------------
+# 0) Read data
+# ----------------------------
+md <- read.csv("metadata2.csv", header = TRUE, stringsAsFactors = FALSE)
+
+# ----------------------------
+# 1) Basic cleaning (snake_case column names, numeric coercion)
+# ----------------------------
+clean <- md %>%
+  janitor::clean_names() %>%
+  mutate(
+    across(
+      c(leaf_area, leaf_number, shoot_dry_weight, root_dry_weight,
+        shoot_fresh_weight, root_fresh_weight, leaf_fresh_weight,
+        leaf_dry_weight, turgid_weight, leaf_rwc, water_deficit,
+        plant_height, stem_diameter, shoot_length, root_length,
+        root_to_shoot_ratio, block_mortality_rate, block_survival_rate),
+      ~ as.numeric(.x)
+    ),
+    specimen_id = as.character(specimen_id),
+    block = as.factor(block)
+  )
+
+# Remove rows that appear to be dead (all zeros in main measured cols)
+clean <- clean %>%
+  filter(
+    !(coalesce(leaf_area, 0) == 0 &
+        coalesce(leaf_number, 0) == 0 &
+        coalesce(shoot_dry_weight, 0) == 0 &
+        coalesce(root_dry_weight, 0) == 0)
+  )
+
+# ----------------------------
+# 2) Group/factor creation used elsewhere
+# ----------------------------
+md_groups <- clean %>%
+  mutate(
+    saline_treatment = factor(saline_treatment, levels = c(0, 50, 100), labels = c("Control", "S1", "S2")),
+    ethanol_pre_treatment = factor(ethanol_pre_treatment, levels = c(0, 20), labels = c("None", "Ethanol")),
+    group = case_when(
+      saline_treatment == "Control" & ethanol_pre_treatment == "None"     ~ "CX",
+      saline_treatment == "Control" & ethanol_pre_treatment == "Ethanol"  ~ "EX",
+      saline_treatment == "S1"      & ethanol_pre_treatment == "None"     ~ "CY",
+      saline_treatment == "S1"      & ethanol_pre_treatment == "Ethanol"  ~ "EY",
+      saline_treatment == "S2"      & ethanol_pre_treatment == "None"     ~ "CZ",
+      saline_treatment == "S2"      & ethanol_pre_treatment == "Ethanol"  ~ "EZ",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  mutate(
+    saline_treatment = relevel(saline_treatment, ref = "Control"),
+    ethanol_pre_treatment = relevel(ethanol_pre_treatment, ref = "None")
+  )
+
+# split per-group if needed later
+group_dfs <- md_groups %>% filter(!is.na(group)) %>% split(.$group)
+# e.g. CX <- group_dfs$CX etc.
+
+# ----------------------------
+# 3) Outlier detection (IQR) - robust trait list (no trailing spaces)
+# ----------------------------
+trait_cols <- c(
+  "leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight",
+  "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight",
+  "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit",
+  "plant_height", "stem_diameter", "shoot_length", "root_length",
+  "root_to_shoot_ratio"
+)
+
+# keep only traits present in data
+present_traits <- intersect(trait_cols, names(clean))
+missing_traits <- setdiff(trait_cols, present_traits)
+if (length(missing_traits) > 0) warning("Missing trait columns (skipped): ", paste(missing_traits, collapse = ", "))
+if (length(present_traits) == 0) stop("No trait columns found in data.")
+
+calculate_outliers <- function(data, trait) {
+  x <- data[[trait]]
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  lower <- Q1 - 1.5 * IQR_val
+  upper <- Q3 + 1.5 * IQR_val
+  out_raw <- x < lower | x > upper
+  ifelse(is.na(out_raw), FALSE, out_raw)
+}
+
+trait_outliers <- lapply(present_traits, function(tr) calculate_outliers(clean, tr))
+names(trait_outliers) <- present_traits
+
+clean_outliers <- clean
+for (tr in names(trait_outliers)) {
+  clean_outliers[[paste0(tr, "_outlier")]] <- trait_outliers[[tr]]
+}
+
+# ----------------------------
+# Correlational analysis placeholder
+# ----------------------------
+# (User's correlational analysis should be placed here.)
+# Example:
+# cor_results <- cor(clean %>% select(all_of(present_traits)), use = "pairwise.complete.obs")
+# print(cor_results)
+
+# ----------------------------
+# PCA + Heatmap pipeline (adapted from PCA2.2.R)
+# ----------------------------
+
+# User settings
+normalize_before_mean <- TRUE       # normalize per-sample before aggregating
+normalization_method <- "zscore"    # "zscore", "minmax", or "log1p"
+force_normalize_if_not <- TRUE
+
+# helper functions for normalization/checking
+check_normalized <- function(df_numeric, method = "zscore", tol_mean = 1e-6, tol_sd = 1e-6, tol_range = 1e-6) {
+  df_numeric <- as.data.frame(df_numeric)
+  res <- tibble::tibble(
+    trait = colnames(df_numeric),
+    mean = sapply(df_numeric, function(x) mean(x, na.rm = TRUE)),
+    sd = sapply(df_numeric, function(x) sd(x, na.rm = TRUE)),
+    min = sapply(df_numeric, function(x) min(x, na.rm = TRUE)),
+    max = sapply(df_numeric, function(x) max(x, na.rm = TRUE))
+  )
+  if (method == "zscore") {
+    res <- res %>% mutate(is_normal = (abs(mean) <= tol_mean) & (abs(sd - 1) <= tol_sd))
+    return(list(per_trait = res, all_normal = all(res$is_normal, na.rm = TRUE), method = "zscore"))
+  } else if (method == "minmax") {
+    res <- res %>% mutate(is_normal = (abs(min - 0) <= tol_range) & (abs(max - 1) <= tol_range))
+    return(list(per_trait = res, all_normal = all(res$is_normal, na.rm = TRUE), method = "minmax"))
+  } else if (method == "log1p") {
+    res <- res %>% mutate(is_nonnegative = min >= 0)
+    warning("log1p check: only non-negativity verified.")
+    return(list(per_trait = res, all_normal = all(res$is_nonnegative, na.rm = TRUE), method = "log1p"))
+  } else stop("Unsupported method.")
+}
+
+normalize_df <- function(df, trait_cols, method = "zscore") {
+  df_out <- df
+  if (method == "zscore") {
+    for (c in trait_cols) {
+      v <- df[[c]]
+      m <- mean(v, na.rm = TRUE); s <- sd(v, na.rm = TRUE)
+      if (is.na(s) || s <= .Machine$double.eps) df_out[[c]] <- ifelse(is.na(v), NA, 0) else df_out[[c]] <- (v - m) / s
+    }
+  } else if (method == "minmax") {
+    for (c in trait_cols) {
+      v <- df[[c]]; mn <- min(v, na.rm = TRUE); mx <- max(v, na.rm = TRUE); rng <- mx - mn
+      if (is.na(rng) || rng <= .Machine$double.eps) df_out[[c]] <- ifelse(is.na(v), NA, 0) else df_out[[c]] <- (v - mn) / rng
+    }
+  } else if (method == "log1p") {
+    for (c in trait_cols) {
+      v <- df[[c]]; mn <- min(v, na.rm = TRUE)
+      if (!is.na(mn) && mn < 0) { shift <- abs(mn) + 1e-8; df_out[[c]] <- log1p(v + shift) } else df_out[[c]] <- log1p(v)
+    }
+  } else stop("Unsupported normalization method.")
+  df_out
+}
+
+# trait columns selected for PCA/heatmap (numeric, non-all-NA)
+exclude_cols_pca <- c("specimen_id", "species", "variety_name", "variety_type",
+                      "block", "health_status", "block_mortality_rate", "block_survival_rate",
+                      "group", "ethanol_pre_treatment", "saline_treatment")
+trait_candidates <- clean %>% select(-any_of(exclude_cols_pca)) %>% select(where(is.numeric))
+trait_candidates <- trait_candidates %>% select(where(~ !all(is.na(.))))
+trait_cols_pca <- colnames(trait_candidates)
+if (length(trait_cols_pca) == 0) stop("No numeric trait columns found for PCA/heatmap.")
+
+# Optional: normalize per-sample before aggregating to treatment means
+if (normalize_before_mean) {
+  check_res <- check_normalized(clean %>% select(all_of(trait_cols_pca)), method = normalization_method)
+  if (!check_res$all_normal && force_normalize_if_not) {
+    clean <- normalize_df(clean, trait_cols_pca, method = normalization_method)
+    trait_candidates <- clean %>% select(all_of(trait_cols_pca))
+  }
+}
+
+# Robust aggregation: use md_groups factors (ensures proper grouping)
+df_means <- md_groups %>%
+  group_by(ethanol_pre_treatment, saline_treatment) %>%
+  summarise(across(all_of(trait_cols_pca), ~ mean(.x, na.rm = TRUE)), .groups = "drop") %>%
+  mutate(
+    ethanol_val = case_when(as.character(ethanol_pre_treatment) %in% c("None", "none") ~ 0,
+                            as.character(ethanol_pre_treatment) %in% c("Ethanol", "ethanol") ~ 20,
+                            TRUE ~ as.numeric(as.character(ethanol_pre_treatment))),
+    saline_val = case_when(as.character(saline_treatment) %in% c("Control", "control") ~ 0,
+                           as.character(saline_treatment) %in% c("S1", "s1") ~ 50,
+                           as.character(saline_treatment) %in% c("S2", "s2") ~ 100,
+                           TRUE ~ as.numeric(as.character(saline_treatment)))
+  ) %>%
+  mutate(
+    treatment = paste0("E", ethanol_val, "_S", saline_val),
+    treatment_label = treatment
+  ) %>%
+  relocate(treatment, treatment_label)
+
+# Map to nicer labels if desired
+treatment_map <- c(
+  "E0_S0"   = "Control",
+  "E0_S50"  = "S1",
+  "E0_S100" = "S2",
+  "E20_S0"  = "Eth",
+  "E20_S50" = "S1 + Eth",
+  "E20_S100"= "S2 + Eth"
+)
+df_means <- df_means %>% mutate(treatment_label = ifelse(treatment %in% names(treatment_map), treatment_map[treatment], treatment_label))
+
+# Build matrix (rows = treatments, cols = traits) and set rownames
+mat <- df_means %>% select(all_of(trait_cols_pca)) %>% as.matrix()
+rownames(mat) <- df_means$treatment_label
+
+# Check number of non-constant traits
+sds <- apply(mat, 2, sd, na.rm = TRUE)
+zero_var <- names(sds)[is.na(sds) | (sds <= 1e-12)]
+nonconst_traits <- setdiff(colnames(mat), zero_var)
+
+if (length(nonconst_traits) < 2) {
+  warning("Not enough non-constant traits for PCA (need >= 2). Skipping PCA; heatmap will still be drawn.")
+  # create heatmap-scaled matrix and draw heatmap only
+  mat_scaled_heat <- scale(mat, center = TRUE, scale = TRUE)
+  mat_scaled_heat[is.na(mat_scaled_heat)] <- 0
+  
+  # column clustering (may still work with 1 col)
+  hc_cols <- try(hclust(dist(t(mat_scaled_heat), method = "euclidean"), method = "complete"), silent = TRUE)
+  
+  # prepare heatmap df
+  col_order <- colnames(mat_scaled_heat)
+  heatmap_df <- as.data.frame(mat_scaled_heat) %>%
+    rownames_to_column("treatment") %>%
+    pivot_longer(-treatment, names_to = "trait", values_to = "value") %>%
+    mutate(trait = factor(trait, levels = col_order), treatment = factor(treatment, levels = rev(rownames(mat_scaled_heat))))
+  
+  heatmap_plot <- ggplot(heatmap_df, aes(x = trait, y = treatment, fill = value)) +
+    geom_tile(color = "grey30") +
+    scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0, name = "z-score") +
+    theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), axis.title = element_blank())
+  
+  print(heatmap_plot)
+  
+} else {
+  # proceed with full pipeline (heatmap + column dendrogram + PCA biplot)
+  mat_scaled_heat <- scale(mat, center = TRUE, scale = TRUE)
+  mat_scaled_heat[is.na(mat_scaled_heat)] <- 0
+  
+  mat_pca <- mat[, nonconst_traits, drop = FALSE]
+  mat_scaled_pca <- scale(mat_pca, center = TRUE, scale = TRUE)
+  mat_scaled_pca[is.na(mat_scaled_pca)] <- 0
+  
+  # clustering for columns (heatmap)
+  hc_cols <- hclust(dist(t(mat_scaled_heat), method = "euclidean"), method = "complete")
+  cluster_col_order <- hc_cols$labels[hc_cols$order]
+  
+  # desired labels (optional mapping by position, adjust if your trait order differs)
+  desired_trait_labels <- c("LFW", "TW", "LDW", "RWC", "WD", "RFW", "PH", "RL",
+                            "LN", "LA", "RDW", "RSR", "SL", "SFW", "SDW", "SD")
+  
+  if (length(desired_trait_labels) == ncol(mat_scaled_heat)) {
+    colnames(mat_scaled_heat) <- desired_trait_labels
+    pca_pos <- match(colnames(mat_pca), colnames(mat))
+    colnames(mat_scaled_pca) <- desired_trait_labels[pca_pos]
+    col_order <- desired_trait_labels
+  } else {
+    col_order <- cluster_col_order
+    col_order <- intersect(col_order, colnames(mat_scaled_heat))
+    if (length(col_order) != ncol(mat_scaled_heat)) {
+      missing_cols <- setdiff(colnames(mat_scaled_heat), col_order)
+      col_order <- c(col_order, missing_cols)
+    }
+  }
+  cor(clean %>% select(all_of(present_traits)),
+      use = "pairwise.complete.obs")
+  X_complete <- clean %>%
+    dplyr::select(dplyr::all_of(present_traits)) %>%
+    tidyr::drop_na()
+  
+  cor_results <- cor(X_complete, use = "complete.obs")
+  # heatmap df and plot
+  heatmap_df <- as.data.frame(mat_scaled_heat) %>%
+    rownames_to_column("treatment") %>%
+    pivot_longer(-treatment, names_to = "trait", values_to = "value") %>%
+    mutate(trait = factor(trait, levels = col_order), treatment = factor(treatment, levels = rev(rownames(mat_scaled_heat))))
+  
+  heatmap_plot <- ggplot(heatmap_df, aes(x = trait, y = treatment, fill = value)) +
+    geom_tile(color = "grey30") +
+    scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0,
+                         limits = c(min(heatmap_df$value, na.rm = TRUE), max(heatmap_df$value, na.rm = TRUE)),
+                         name = "z-score") +
+    theme_minimal(base_size = 11) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8), axis.title = element_blank(), panel.grid = element_blank())
+  
+  # dendrogram (top)
+  ddata <- dendro_data(hc_cols, type = "rectangle")
+  segments_df <- segment(ddata)
+  dendro_plot_top <- ggplot() +
+    geom_segment(data = segments_df, aes(x = x, y = y, xend = xend, yend = yend), size = 0.6) +
+    scale_x_continuous(expand = c(0, 0), limits = c(0.5, length(col_order) + 0.6)) +
+    theme_void()
+  
+  # PCA
+  pca <- prcomp(mat_scaled_pca, center = FALSE, scale. = FALSE)
+  scores <- as.data.frame(pca$x[, 1:2], check.names = FALSE) %>% rownames_to_column("treatment_label")
+  colnames(scores)[2:3] <- c("PC1", "PC2")
+  # attach grouping info for plotting (if needed)
+  scores <- scores %>% left_join(df_means %>% select(treatment_label, ethanol_pre_treatment, saline_treatment), by = "treatment_label")
+  
+  loadings <- as.data.frame(pca$rotation[, 1:2], check.names = FALSE) %>% rownames_to_column("trait")
+  colnames(loadings)[2:3] <- c("PC1", "PC2")
+  mult <- min(
+    (max(scores$PC1) - min(scores$PC1)) / (max(loadings$PC1) - min(loadings$PC1) + 1e-9),
+    (max(scores$PC2) - min(scores$PC2)) / (max(loadings$PC2) - min(loadings$PC2) + 1e-9)
+  ) * 0.6
+  loadings <- loadings %>% mutate(PC1s = PC1 * mult, PC2s = PC2 * mult, len = sqrt(PC1^2 + PC2^2))
+  loadings_label <- loadings %>% arrange(desc(len)) %>% slice(1:min(18, nrow(loadings)))
+  
+  pct_var <- function(i) round(100 * (pca$sdev[i]^2 / sum(pca$sdev^2)), 2)
+  xlab <- paste0("PC1 (", pct_var(1), "%)")
+  ylab <- paste0("PC2 (", pct_var(2), "%)")
+  
+  pca_plot <- ggplot() +
+    geom_hline(yintercept = 0, color = "grey70") +
+    geom_vline(xintercept = 0, color = "grey70") +
+    geom_point(data = scores, aes(PC1, PC2), color = "red", size = 3) +
+    geom_text_repel(data = scores, aes(PC1, PC2, label = treatment_label), color = "red", size = 3.2, max.overlaps = Inf) +
+    geom_segment(data = loadings, aes(x = 0, y = 0, xend = PC1s, yend = PC2s), arrow = arrow(length = unit(0.02, "npc")), color = "blue", alpha = 0.6) +
+    geom_text_repel(data = loadings_label, aes(x = PC1s, y = PC2s, label = trait), size = 3) +
+    stat_ellipse(data = scores, aes(x = PC1, y = PC2), linetype = 2, color = "darkred", level = 0.68, inherit.aes = FALSE) +
+    theme_minimal() + labs(x = xlab, y = ylab) +
+    theme_set(theme_bw()) + #To make the gray background white
+    theme( plot.background = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) #Eliminate the grids
+  
+  
+  combined <- (dendro_plot_top / heatmap_plot) / pca_plot + plot_layout(heights = c(0.7, 4.5, 4.0))
+  print(combined)
+  # ggsave("combined_heatmap_pca_top_dendro.png", combined, width = 14, height = 12, dpi = 300)
+}
+
+# End of Main.R
