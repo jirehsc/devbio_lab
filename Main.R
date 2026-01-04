@@ -474,12 +474,6 @@ if (length(nonconst_traits) < 2) {
   heatmap_df$trait <- factor(heatmap_df$trait, levels = colnames(mat_scaled_heat))
   heatmap_df$treatment <- factor(heatmap_df$treatment, levels = rev(rownames(mat_scaled_heat)))
 
-  heatmap_plot <- ggplot2::ggplot(heatmap_df, ggplot2::aes(x = trait, y = treatment, fill = value)) +
-    ggplot2::geom_tile(color = "grey30") +
-    ggplot2::scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0, name = "z-score") +
-    ggplot2::theme_minimal() + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1), axis.title = ggplot2::element_blank())
-
-  print(heatmap_plot)
 } else {
   # Full pipeline: heatmap + dendrogram + PCA biplot
   mat_scaled_heat <- scale(mat, center = TRUE, scale = TRUE); mat_scaled_heat[is.na(mat_scaled_heat)] <- 0
@@ -503,15 +497,6 @@ if (length(nonconst_traits) < 2) {
   }))
   heatmap_df$trait <- factor(heatmap_df$trait, levels = col_order)
   heatmap_df$treatment <- factor(heatmap_df$treatment, levels = rev(rownames(mat_scaled_heat)))
-
-  heatmap_plot <- ggplot2::ggplot(heatmap_df, ggplot2::aes(x = trait, y = treatment, fill = value)) +
-    ggplot2::geom_tile(color = "grey30") +
-    ggplot2::scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0,
-                                  limits = c(min(heatmap_df$value, na.rm = TRUE), max(heatmap_df$value, na.rm = TRUE)),
-                                  name = "z-score") +
-    ggplot2::theme_minimal(base_size = 11) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8),
-                   axis.ticks.x = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), panel.grid = ggplot2::element_blank())
 
   # Dendrogram (top)
   ddata <- tryCatch(ggdendro::dendro_data(hc_cols, type = "rectangle"), error = function(e) NULL)
@@ -1701,8 +1686,7 @@ group_dfs <- md_groups %>% filter(!is.na(group)) %>% split(.$group)
 # ----------------------------
 trait_cols <- c(
   "leaf_area", "leaf_number", "shoot_dry_weight", "root_dry_weight",
-  "shoot_fresh_weight", "root_fresh_weight", "leaf_fresh_weight",
-  "leaf_dry_weight", "turgid_weight", "leaf_rwc", "water_deficit",
+  "shoot_fresh_weight", "root_fresh_weight",
   "plant_height", "stem_diameter", "shoot_length", "root_length",
   "root_to_shoot_ratio"
 )
@@ -1784,7 +1768,8 @@ normalize_df <- function(df, trait_cols, method = "zscore") {
 # trait columns selected for PCA/heatmap (numeric, non-all-NA)
 exclude_cols_pca <- c("specimen_id", "species", "variety_name", "variety_type",
                       "block", "health_status", "block_mortality_rate", "block_survival_rate",
-                      "group", "ethanol_pre_treatment", "saline_treatment")
+                      "group", "ethanol_pre_treatment", "saline_treatment", "leaf_rwc", "water_deficit",
+                      "turgid_weight", "leaf_fresh_weight", "leaf_dry_weight")
 trait_candidates <- clean %>% select(-any_of(exclude_cols_pca)) %>% select(where(is.numeric))
 trait_candidates <- trait_candidates %>% select(where(~ !all(is.na(.))))
 trait_cols_pca <- colnames(trait_candidates)
@@ -1847,20 +1832,6 @@ if (length(nonconst_traits) < 2) {
   # column clustering (may still work with 1 col)
   hc_cols <- try(hclust(dist(t(mat_scaled_heat), method = "euclidean"), method = "complete"), silent = TRUE)
   
-  # prepare heatmap df
-  col_order <- colnames(mat_scaled_heat)
-  heatmap_df <- as.data.frame(mat_scaled_heat) %>%
-    rownames_to_column("treatment") %>%
-    pivot_longer(-treatment, names_to = "trait", values_to = "value") %>%
-    mutate(trait = factor(trait, levels = col_order), treatment = factor(treatment, levels = rev(rownames(mat_scaled_heat))))
-  
-  heatmap_plot <- ggplot(heatmap_df, aes(x = trait, y = treatment, fill = value)) +
-    geom_tile(color = "grey30") +
-    scale_fill_gradient2(low = "#00B200", mid = "black", high = "#D7191C", midpoint = 0, name = "z-score") +
-    theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), axis.title = element_blank())
-  
-  print(heatmap_plot)
-  
 } else {
   # proceed with full pipeline (heatmap + column dendrogram + PCA biplot)
   mat_scaled_heat <- scale(mat, center = TRUE, scale = TRUE)
@@ -1875,7 +1846,7 @@ if (length(nonconst_traits) < 2) {
   cluster_col_order <- hc_cols$labels[hc_cols$order]
   
   # desired labels (optional mapping by position, adjust if your trait order differs)
-  desired_trait_labels <- c("LFW", "TW", "LDW", "RWC", "WD", "RFW", "PH", "RL",
+  desired_trait_labels <- c("RFW", "PH", "RL",
                             "LN", "LA", "RDW", "RSR", "SL", "SFW", "SDW", "SD")
   
   if (length(desired_trait_labels) == ncol(mat_scaled_heat)) {
@@ -1898,27 +1869,41 @@ if (length(nonconst_traits) < 2) {
     tidyr::drop_na()
   
   cor_results <- cor(X_complete, use = "complete.obs")
+  
   # heatmap df and plot
-  heatmap_df <- as.data.frame(mat_scaled_heat) %>%
-    rownames_to_column("treatment") %>%
-    pivot_longer(-treatment, names_to = "trait", values_to = "value") %>%
-    mutate(trait = factor(trait, levels = col_order), treatment = factor(treatment, levels = rev(rownames(mat_scaled_heat))))
+  # read the csv of correlation / heat values (you provided)
+  corr_df <- read.csv("corrvalues.csv", stringsAsFactors = FALSE)
   
-  heatmap_plot <- ggplot(heatmap_df, aes(x = trait, y = treatment, fill = value)) +
-    geom_tile(color = "grey30") +
-    scale_fill_gradient2(low = "#2c7fb8", mid = "#7fcdbb", high = "#edf8b1", midpoint = 0,
-                         limits = c(min(heatmap_df$value, na.rm = TRUE), max(heatmap_df$value, na.rm = TRUE)),
-                         name = "z-score") +
+  # keep trait order as in the file (or change to desired order)
+  trait_levels <- unique(corr_df$trait)
+  # desired treatment order (adjust if you want another order)
+  desired_treatments <- c("Control", "S1", "S2", "Eth", "S1 + Eth", "S2 + Eth")
+  treat_levels <- intersect(desired_treatments, unique(corr_df$treatment))
+  # fall back to file order for any others
+  treat_levels <- c(treat_levels, setdiff(unique(corr_df$treatment), treat_levels))
+  
+  corr_df <- corr_df %>%
+    mutate(
+      trait = factor(trait, levels = trait_levels),
+      treatment = factor(treatment, levels = rev(treat_levels)),  # reverse so first level appears at top
+      label = sprintf("%.2f", value),
+      text_col = ifelse(abs(value) > 0.55, "white", "black")       # threshold for contrast; tweak if needed
+    )
+  
+ corr_plot <- ggplot(corr_df, aes(x = trait, y = treatment, fill = value)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = label, color = text_col), size = 3) +
+    scale_color_identity() +
+    scale_fill_gradient2(
+      low = "blue", mid = "white", high = "red",
+      midpoint = 0, limits = c(-2, 2), name = "z-score") +
     theme_minimal(base_size = 11) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8), axis.title = element_blank(), panel.grid = element_blank())
-  
-  # dendrogram (top)
-  ddata <- dendro_data(hc_cols, type = "rectangle")
-  segments_df <- segment(ddata)
-  dendro_plot_top <- ggplot() +
-    geom_segment(data = segments_df, aes(x = x, y = y, xend = xend, yend = yend), size = 0.6) +
-    scale_x_continuous(expand = c(0, 0), limits = c(0.5, length(col_order) + 0.6)) +
-    theme_void() 
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      axis.title = element_blank(),
+      panel.grid = element_blank()
+    ) +
+    coord_fixed()
   
   # PCA
   pca <- prcomp(mat_scaled_pca, center = FALSE, scale. = FALSE)
@@ -1949,10 +1934,20 @@ if (length(nonconst_traits) < 2) {
     geom_text_repel(data = loadings_label, aes(x = PC1s, y = PC2s, label = trait), size = 3) +
     stat_ellipse(data = scores, aes(x = PC1, y = PC2), linetype = 2, color = "red", level = 0.50, inherit.aes = FALSE) +
     theme_minimal() + labs(x = xlab, y = ylab) +
-    theme_set(theme_bw()) + #To make the gray background white
-    theme( plot.background = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) #Eliminate the grids
+    theme(panel.background = element_blank()) + theme_bw()#Eliminate the grids
 
   combined <- (dendro_plot_top / heatmap_plot) / pca_plot + plot_layout(heights = c(0.7, 4.5, 4.0))
+  print(combined)
+  # --- combine with patchwork ---
+  # Option A: put corr_plot to the right of the treatment heatmap
+  if (exists("dendro_plot_top")) {
+    combined <- (dendro_plot_top / (corr_plot)) / pca_plot +
+      patchwork::plot_layout(heights = c(0.7, 4.5, 4.0), widths = c(3, 2))
+  } else {
+    combined <- (heatmap_plot | corr_plot) / pca_plot +
+      patchwork::plot_layout(heights = c(4.5, 4.0), widths = c(3, 2))
+  }
+  
   print(combined)
   # ggsave("combined_heatmap_pca_top_dendro.png", combined, width = 14, height = 12, dpi = 300)
 }
@@ -2150,3 +2145,42 @@ report_not_normal <- function(chk) {
 if (exists("chk_spec")) report_not_normal(chk_spec)
 if (exists("chk_heat")) report_not_normal(chk_heat)
 if (exists("chk_pca")) report_not_normal(chk_pca)
+
+colnames(heatmap_df)
+
+withCallingHandlers(
+  {
+    ggplot(heatmap_df, aes(trait, treatment, fill = value)) +
+      geom_tile()
+  },
+  warning = function(w) {
+    print(conditionCall(w))
+    invokeRestart("muffleWarning")
+  }
+)
+
+sessionInfo()
+
+ls()
+
+
+
+
+heatmap_df <- heatmap_df %>%
+  mutate(
+    trait = factor(trait),
+    treatment = factor(treatment)
+  
+
+stopifnot(
+  "trait" %in% names(heatmap_df),
+  "treatment" %in% names(heatmap_df),
+  "value" %in% names(heatmap_df)
+)
+
+sapply(heatmap_df[c("trait", "treatment", "value")], length)
+
+table(is.na(heatmap_df$trait))
+
+
+
