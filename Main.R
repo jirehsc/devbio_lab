@@ -1694,7 +1694,7 @@ md_groups <- clean %>%
 
 # split per-group if needed later
 group_dfs <- md_groups %>% filter(!is.na(group)) %>% split(.$group)
-# e.g. CX <- group_dfs$CX etc.
+
 
 # ----------------------------
 # 3) Outlier detection (IQR) - robust trait list (no trailing spaces)
@@ -2131,9 +2131,6 @@ scale_columns <- function(mat_raw, center = TRUE, scale = TRUE, na.rm = TRUE) {
   }
   return(m_scaled)
 }
-
-# Example: to create mat_spec_scaled if only have mat_spec:
-# mat_spec_scaled <- scale_columns(mat_spec)
 
 # 4) Summary: produce a table of which columns are NOT normalized (within tolerances)
 report_not_normal <- function(chk) {
